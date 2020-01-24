@@ -3,12 +3,11 @@
 
 """
 Licencing Agreement: MalwareTech Public Licence
-This software is free to use providing the user yells "Oh no, the cyberhackers are coming!" prior to each installation.
+This software is free to use providing the user yells
+"Oh no, the cyberhackers are coming!" prior to each installation.
 """
 
 from __future__ import print_function
-from future.standard_library import install_aliases
-install_aliases()
 
 import os
 import sys
@@ -21,8 +20,12 @@ import traceback
 import logging.handlers
 from http import server
 from core.config import CONFIG
-from urllib.parse import urlparse
 from argparse import ArgumentParser
+
+try:
+    from urllib.parse import unquote, parse_qs
+except ImportError:
+    from urlparse import unquote, parse_qs
 
 __VERSION__ = '2.0.0'
 
@@ -45,10 +48,13 @@ class CitrixHandler(server.SimpleHTTPRequestHandler):
     page_cache = {'403.html': '', 'login.html': '', 'smb.conf': '', 'gold_star.html': ''}
 
     def __init__(self, args, directory, kwargs):
-        super().__init__(args, directory, kwargs)
+        if issubclass(server.SimpleHTTPRequestHandler, object):
+            super(CitrixHandler, self).__init__(args, directory, kwargs)
+        else:
+            server.SimpleHTTPRequestHandler.__init__(self, args, directory, kwargs)
 
     def do_HEAD(self):
-        path = urlparse.unquote(self.path)
+        path = unquote(self.path)
 
         self.log(logging.INFO, 'HEAD Header: {}'.format(path))
 
@@ -81,12 +87,12 @@ class CitrixHandler(server.SimpleHTTPRequestHandler):
 
     # handle GET requests and attempt to emulate a vulnerable server
     def do_GET(self):
-        path = urlparse.unquote(self.path)
+        path = unquote(self.path)
 
         self.log(logging.INFO, 'GET Header: {}'.format(path))
 
         if self.struggle_check(path):
-            return
+            return ''
 
         # split the path by '/', ignoring empty string
         url_path = list(filter(None, path.split('/')))
@@ -131,7 +137,7 @@ class CitrixHandler(server.SimpleHTTPRequestHandler):
 
     # handle POST requests to try and capture exploit payloads
     def do_POST(self):
-        path = urlparse.unquote(self.path)
+        path = unquote(self.path)
 
         self.log(logging.INFO, 'POST Header: {}'.format(path))
 
@@ -143,7 +149,7 @@ class CitrixHandler(server.SimpleHTTPRequestHandler):
 
             # RCE path is /vpns/portal/scripts/newbm.pl and payload is contained in POST data
             if content_length != 0 and collapsed_path == '/vpns/portal/scripts/newbm.pl':
-                payload = urlparse.parse_qs(post_data)['title'][0]
+                payload = parse_qs(post_data)['title'][0]
                 self.log(logging.CRITICAL, 'Detected CVE-2019-19781 payload: {}'.format(payload))
 
         if self.struggle_check(path):
@@ -256,13 +262,13 @@ def main():
 
     httpd = server.HTTPServer((cfg_options['addr'], cfg_options['port']), CitrixHandler)
     httpd.socket = ssl.wrap_socket(httpd.socket,
-                                    certfile='{}/cert.pem'.format(cfg_options['ssldir']),
-                                    keyfile='{}/key.pem'.format(cfg_options['ssldir']),
-                                    server_side=True)
+                                   certfile='{}/cert.pem'.format(cfg_options['ssldir']),
+                                   keyfile='{}/key.pem'.format(cfg_options['ssldir']),
+                                   server_side=True)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print('Shutdown requested... exiting.')
+        print('\nShutdown requested... exiting.')
     except Exception:
         traceback.print_exc(file=sys.stdout)
     sys.exit(0)

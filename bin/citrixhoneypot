@@ -3,54 +3,52 @@
 citrixhoneypot_directory() {
     if [[ "$0" = /* ]]
     then
-        CITRIXHONEYPOTDIR=$(dirname $0)/..
+        CITRIXHONEYPOTDIR=$(dirname "$0")/..
     else
-        CITRIXHONEYPOTDIR=$(dirname $PWD/$0)/..
+        CITRIXHONEYPOTDIR=$(dirname "$PWD"/"$0")/..
     fi
-    CITRIXHONEYPOTDIR=$(cd ${CITRIXHONEYPOTDIR} && pwd -P 2>/dev/null || pwd)
+    CITRIXHONEYPOTDIR=$(cd "${CITRIXHONEYPOTDIR}" && pwd -P 2>/dev/null || pwd)
 }
 
-citrixhoneypot_directory $0
+citrixhoneypot_directory "$0"
 config_dir=${CITRIXHONEYPOTDIR}/etc
 config_file_name=${config_dir}/citrixhoneypot-launch.cfg
-
-script_dir=$(dirname "$(readlink -f "$0")")
 
 config_read_file() {
     (grep -E "^${2}=" -m 1 "${1}" 2>/dev/null || echo "VAR=__UNDEFINED__") | head -n 1 | cut -d '=' -f 2-;
 }
 
 config_get() {
-    val="$(config_read_file ${config_file_name} "${1}")";
+    val="$(config_read_file "${config_file_name}" "${1}")";
     if [ "${val}" = "__UNDEFINED__" ]; then
-        val="$(config_read_file ${config_file_name}.base "${1}")";
+        val="$(config_read_file "${config_file_name}.base" "${1}")";
     fi
     printf -- "%s" "${val}";
 }
 
-CITRIX_VIRTUAL_ENV="$(config_get CITRIX_VIRTUAL_ENV)";
+#CITRIX_VIRTUAL_ENV="$(config_get CITRIX_VIRTUAL_ENV)";
 
-activate_venv() {
-    # Activate Python virtual environment
-    VENV="$1"
-    if [ ! -f "$VENV/bin/activate" ]
-    then
-        return 1
-    fi
-    . $VENV/bin/activate
-    return 0
-}
+#activate_venv() {
+#    # Activate Python virtual environment
+#    VENV="$1"
+#    if [ ! -f "$VENV/bin/activate" ]
+#    then
+#        return 1
+#    fi
+#    . $VENV/bin/activate
+#    return 0
+#}
 
 citrixhoneypot_status() {
     # Print status
-    PID=$(cat ${PIDFILE} 2>/dev/null || echo "")
+    PID=$(cat "${PIDFILE}" 2>/dev/null || echo "")
     if [ -n "$PID" ]; then
-        if ps -p "$PID" 2>&1 >/dev/null; then
+        if ps -p "$PID" >/dev/null 2>&1; then
             echo "CitrixHoneypot is running (PID: ${PID})."
         else
             echo "CitrixHonepot is not running (PID: ${PID})."
             echo "Removing stale PID file"
-            rm -f ${PIDFILE}
+            rm -f "${PIDFILE}"
         fi
     else
         echo "CitrixHoneypot is not running."
@@ -60,43 +58,45 @@ citrixhoneypot_status() {
 citrixhoneypot_start() {
     # Start CitrixHoneypot
     citrixhoneypot_status
-    PID=$(cat ${PIDFILE} 2>/dev/null || echo -n "")
+    PID=$(cat "${PIDFILE}" 2>/dev/null || echo -n "")
     if [ -z "$PID" ]; then
         echo "Starting CitrixHoneypot ..."
-        if [ ! -z "$VIRTUAL_ENV" ]; then
-            echo 2>&1 "Using activated Python virtual environment \"$VIRTUAL_ENV\". CitrixHoneypot is started successfully."
-            nohup python ${CITRIXHONEYPOTDIR}/CitrixHoneypot.py &>/dev/null & echo $! > ${CITRIXHONEYPOTDIR}/${PIDFILE}
-        elif activate_venv "$CITRIX_VIRTUAL_ENV"; then
-            nohup python ${CITRIXHONEYPOTDIR}/CitrixHoneypot.py &>/dev/null & echo $! > ${CITRIXHONEYPOTDIR}/${PIDFILE}
-            echo 2>&1 "CitrixHoneypot is started successfully."
-        else
-            echo 2>&1 "Can't activate virtual environment \"$CITRIX_VIRTUAL_ENV\"."
-        fi
+        nohup python "${CITRIXHONEYPOTDIR}/CitrixHoneypot.py" &>/dev/null & echo $! > "${CITRIXHONEYPOTDIR}/${PIDFILE}"
+        echo 2>&1 "CitrixHoneypot is started successfully."
+#        if [ ! -z "$VIRTUAL_ENV" ]; then
+#            echo 2>&1 "Using activated Python virtual environment \"$VIRTUAL_ENV\". CitrixHoneypot is started successfully."
+#            nohup python ${CITRIXHONEYPOTDIR}/CitrixHoneypot.py &>/dev/null & echo $! > ${CITRIXHONEYPOTDIR}/${PIDFILE}
+#        elif activate_venv "$CITRIX_VIRTUAL_ENV"; then
+#            nohup python ${CITRIXHONEYPOTDIR}/CitrixHoneypot.py &>/dev/null & echo $! > ${CITRIXHONEYPOTDIR}/${PIDFILE}
+#            echo 2>&1 "CitrixHoneypot is started successfully."
+#        else
+#            echo 2>&1 "Can't activate virtual environment \"$CITRIX_VIRTUAL_ENV\"."
+#        fi
     fi
 }
 
 citrixhoneypot_stop() {
     # Stop CitrixHoneypot
-    PID=$(cat ${PIDFILE} 2>/dev/null || echo -n "")
+    PID=$(cat "${PIDFILE}" 2>/dev/null || echo -n "")
     if [ -n "$PID" ]; then
         echo -n "Stopping CitrixHoneypot..."
-        if kill -TERM $PID; then
+        if kill -TERM "$PID"; then
             ((t = 60))
             while ((t > 1)); do
                 sleep 1
-                if kill -0 $PID >/dev/null 2>&1; then
+                if kill -0 "$PID" >/dev/null 2>&1; then
                     ((t -= 1))
                 else
                     echo "terminated."
-                    rm -f ${PIDFILE}
+                    rm -f "${PIDFILE}"
                     return
                 fi
             done
-            kill -KILL $PID
+            kill -KILL "$PID"
             echo "killed."
         else
             echo -e "\nRemoving stale PID file"
-            rm -f ${PIDFILE}
+            rm -f "${PIDFILE}"
         fi
     else
         echo "CitrixHoneypot is not running."
@@ -117,8 +117,8 @@ then
     exit 1
 fi
 
-citrixhoneypot_directory $0
-cd ${CITRIXHONEYPOTDIR}
+citrixhoneypot_directory "$0"
+cd "${CITRIXHONEYPOTDIR}"
 PIDFILE=citrixhoneypot.pid
 set -e
 
@@ -126,17 +126,17 @@ key=$1
 shift 1
 case $key in
     stop)
-        citrixhoneypot_stop $*
+        citrixhoneypot_stop "$*"
         ;;
     start)
-        citrixhoneypot_start $*
+        citrixhoneypot_start "$*"
         ;;
     restart)
-        citrixhoneypot_stop $*
-        citrixhoneypot_start $*
+        citrixhoneypot_stop "$*"
+        citrixhoneypot_start "$*"
         ;;
     status)
-        citrixhoneypot_status $*
+        citrixhoneypot_status "$*"
         ;;
     *)
         citrixhoneypot_usage

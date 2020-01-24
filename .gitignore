@@ -33,7 +33,7 @@ wheels/
 .pyproject
 
 # Visual Studio Code project
-.vscode
+.vscode/
 
 # DataBase files
 *.db
