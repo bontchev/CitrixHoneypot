@@ -7,8 +7,6 @@ This software is free to use providing the user yells
 "Oh no, the cyberhackers are coming!" prior to each installation.
 """
 
-from __future__ import print_function
-
 import os
 import sys
 import ssl
@@ -17,7 +15,6 @@ import errno
 import socket
 import logging
 import traceback
-import logging.handlers
 from http import server
 from core.config import CONFIG
 from argparse import ArgumentParser
@@ -98,7 +95,9 @@ class CitrixHandler(server.SimpleHTTPRequestHandler):
         url_path = list(filter(None, path.split('/')))
 
         # if url is empty or path is /vpn/, display fake login page
-        if len(url_path) == 0 or (len(url_path) == 1 and url_path[0] == 'vpn'):
+        if len(url_path) == 0 or \
+        (len(url_path) == 1 and url_path[0] == 'vpn') or \
+        (len(url_path) == 2 and url_path[0] == 'vpn' and url_path[1].lower().startswith('index.htm')):
             return self.send_response(self.get_page('login.html'))
 
         # only proceed if a directory traversal was attempted
@@ -117,7 +116,7 @@ class CitrixHandler(server.SimpleHTTPRequestHandler):
                     page_403 = self.get_page('403.html').replace('{url}', collapsed_path)
                     return self.send_response(page_403)
 
-                if len(url_path) >= 2 and url_path[0] == 'vpns' and url_path[1] == 'portal':
+                elif len(url_path) >= 2 and url_path[0] == 'vpns' and url_path[1] == 'portal':
                     self.log(logging.CRITICAL, 'Detected CVE-2019-19781 completion!')
                     return self.send_response('')
 
@@ -130,7 +129,7 @@ class CitrixHandler(server.SimpleHTTPRequestHandler):
                 # we got a request that sort of matches CVE-2019-19781, but it's not a known scan attempt
                 else:
                     self.log(logging.DEBUG, 'Error: unhandled CVE-2019-19781 scan attempt: {}'.format(path))
-                    self.send_response('')
+                return self.send_response('')
 
         # if all else fails return nothing
         return self.send_response('')
@@ -153,7 +152,7 @@ class CitrixHandler(server.SimpleHTTPRequestHandler):
                 self.log(logging.CRITICAL, 'Detected CVE-2019-19781 payload: {}'.format(payload))
 
         if self.struggle_check(path):
-            return
+            return ''
 
         # send empty response as we're now done
         return self.send_response('')
@@ -268,9 +267,10 @@ def main():
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print('\nShutdown requested... exiting.')
+        logging.log(logging.INFO, 'Shutdown requested... exiting.')
     except Exception:
         traceback.print_exc(file=sys.stdout)
+    httpd.server_close()
     sys.exit(0)
 
 
