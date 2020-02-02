@@ -4,7 +4,6 @@ Detect and log CVE-2019-19781 scan and exploitation attempts.
 
 ## Requirements
 
-- python3
 - openssl
 
 ## Usage
@@ -12,7 +11,8 @@ Detect and log CVE-2019-19781 scan and exploitation attempts.
 ### Step #1: Clone repo
 
 ```bash
-git clone https://github.com/MalwareTech/CitrixHoneypot.git CitrixHoneypot && cd CitrixHoneypot
+git clone https://github.com/MalwareTech/CitrixHoneypot.git CitrixHoneypot
+cd CitrixHoneypot
 ```
 
 ### Step #2: Generate a self-signed SSL certificate
