@@ -208,7 +208,7 @@ class Index(Resource):
                 }
 
                 # RCE path is /vpns/portal/scripts/newbm.pl and payload is contained in POST data
-                if collapsed_path == ['/vpns/portal/scripts/newbm.pl', '/vpns/portal/scripts/rmbm.pl']:
+                if collapsed_path in ['/vpns/portal/scripts/newbm.pl', '/vpns/portal/scripts/rmbm.pl']:
                     payload = parse_qs(post_data)['title'][0]
                     self.log(request, logging.CRITICAL, 'Detected CVE-2019-19781 payload: {}'.format(payload))
                     event['payload'] = payload
@@ -351,7 +351,7 @@ def set_logger(cfg_options):
 
 def import_plugins(cfg):
     # Load output modules (inspired by the Cowrie honeypot)
-    logging.log(logging.INFO, 'Loading plugins...')
+    logging.log(logging.INFO, 'Loading the plugins...')
     output_plugins = []
     general_options = cfg
     for x in CONFIG.sections():
