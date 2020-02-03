@@ -60,8 +60,8 @@ class Index(Resource):
                     'eventid': 'citrix.connection',
                     'timestamp': human_time,
                     'unixtime': unix_time,
-                    'src_ip': request.getClientAddress().host,
-                    'src_port': request.getClientAddress().port,
+                    'src_ip': self.get_real_ip(request),
+                    'src_port': self.get_real_port(request),
                     'dst_ip': local_ip,
                     'dst_port': self.cfg['port'],
                     'sensor': self.cfg['sensor'],
@@ -128,8 +128,8 @@ class Index(Resource):
                     'eventid': 'citrix.connection',
                     'timestamp': human_time,
                     'unixtime': unix_time,
-                    'src_ip': request.getClientAddress().host,
-                    'src_port': request.getClientAddress().port,
+                    'src_ip': self.get_real_ip(request),
+                    'src_port': self.get_real_port(request),
                     'dst_ip': local_ip,
                     'dst_port': self.cfg['port'],
                     'sensor': self.cfg['sensor'],
@@ -196,8 +196,8 @@ class Index(Resource):
                     'eventid': 'citrix.payload',
                     'timestamp': human_time,
                     'unixtime': unix_time,
-                    'src_ip': request.getClientAddress().host,
-                    'src_port': request.getClientAddress().port,
+                    'src_ip': self.get_real_ip(request),
+                    'src_port': self.get_real_port(request),
                     'dst_ip': local_ip,
                     'dst_port': self.cfg['port'],
                     'sensor': self.cfg['sensor'],
@@ -219,12 +219,17 @@ class Index(Resource):
         # send empty response as we're now done
         return self.send_response(request)
 
+    def get_real_ip (self, request):
+        ip = request.getHeader('X-Real-IP')
+        return request.getClientAddress().host if ip is None else ip
+
+    def get_real_port (self, request):
+        port = request.getHeader('X-Real-Port')
+        return request.getClientAddress().port if port is None else port
+
     def log(self, request, log_level, msg):
-        if request.getHeader('X-Real-IP'):
-            ip = request.getHeader('X-Real-IP')
-        else:
-            ip = request.getClientAddress().host
-        port = request.getClientAddress().port
+        ip = self.get_real_ip(request)
+        port = self.get_real_port(request)
         logging.log(log_level, '({}:{}): {}'.format(ip, port, msg))
 
     def struggle_check(self, request, path):
