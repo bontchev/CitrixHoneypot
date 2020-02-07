@@ -17,6 +17,7 @@ import datetime
 
 from core.config import CONFIG
 from argparse import ArgumentParser
+from logging.handlers import TimedRotatingFileHandler
 
 from twisted.web import server
 from twisted.web.resource import Resource
@@ -38,7 +39,7 @@ class Index(Resource):
         self.cfg = options
 
     def render_HEAD(self, request):
-        path = unquote(request.uri)
+        path = unquote(request.uri.decode('utf-8'))
         self.log(request, logging.INFO, '{}: {}'.format(request.method, path))
 
         # split the path by '/', ignoring empty string
@@ -92,10 +93,10 @@ class Index(Resource):
                     event['message'] = 'Unknown scan'
                 self.write_event(event)
 
-    	return self.send_response(request)
+        return self.send_response(request)
 
     def render_GET(self, request):
-        path = unquote(request.uri)
+        path = unquote(request.uri.decode('utf-8'))
 
         self.log(request, logging.INFO, '{}: {}'.format(request.method, path))
 
@@ -177,7 +178,7 @@ class Index(Resource):
         return self.send_response(request)
 
     def render_POST(self, request):
-        path = unquote(request.uri)
+        path = unquote(request.uri.decode('utf-8'))
 
         self.log(request, logging.INFO, '{}: {}'.format(request.method, path))
 
@@ -340,7 +341,7 @@ def set_logger(cfg_options):
     if cfg_options['logfile'] is None:
         handler = logging.StreamHandler(sys.stdout)
     else:
-        handler = logging.handlers.WatchedFileHandler(cfg_options['logfile'])
+        handler = TimedRotatingFileHandler(cfg_options['logfile'], when='midnight', delay=True)
     out_fmt = '[%(asctime)s.%(msecs)03dZ] [%(levelname)s] %(message)s'
     dt_fmt = '%Y-%m-%d %H:%M:%S'
     logging.Formatter.converter = time.gmtime
