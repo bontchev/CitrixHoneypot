@@ -1,25 +1,31 @@
-from __future__ import print_function
+
 import os
 import json
 import copy
 import errno
-import core.output
-from core.config import CONFIG
 
+import core.output
+
+from core.config import CONFIG
+from core.logfile import CitrixDailyLogFile
 
 class Output(core.output.Output):
 
-    def __init__(self, general_options):
-        self.outfile = CONFIG.get('output_jsonlog', 'logfile')
-        self.epoch_timestamp = CONFIG.getboolean('output_jsonlog', 'epoch_timestamp', fallback=False)
-
-        core.output.Output.__init__(self, general_options)
-
     def start(self):
-        pass
+        self.epoch_timestamp = CONFIG.getboolean('output_jsonlog', 'epoch_timestamp', fallback=False)
+        fn = CONFIG.get('output_jsonlog', 'logfile')
+        dirs = os.path.dirname(fn)
+        base = os.path.basename(fn)
+        if not os.path.exists(dirs) and os.sep in fn:
+            try:
+                os.makedirs(dirs)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:
+                    raise
+        self.outfile = CitrixDailyLogFile(base, dirs, defaultMode=0o664)
 
     def stop(self):
-        pass
+        self.outfile.flush()
 
     def write(self, event):
         if not self.epoch_timestamp:
@@ -28,11 +34,6 @@ class Output(core.output.Output):
             event_dump.pop('unixtime', None)
         else:
             event_dump = event
-        if not os.path.exists(os.path.dirname(self.outfile)) and '/' in self.outfile:
-            try:
-                os.makedirs(os.path.dirname(self.outfile))
-            except OSError as exc:
-                if exc.errno != errno.EEXIST:
-                    raise
-        with open(self.outfile, 'a') as f:
-            print(json.dumps(event_dump), file=f)
+        json.dump(event_dump, self.outfile, separators=(',', ':'))
+        self.outfile.write('\n')
+        self.outfile.flush()

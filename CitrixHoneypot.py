@@ -10,304 +10,22 @@ This software is free to use providing the user yells
 import os
 import sys
 import time
-import errno
 import socket
-import logging
-import datetime
 
-from core.config import CONFIG
+from datetime import datetime
 from argparse import ArgumentParser
-from logging.handlers import TimedRotatingFileHandler
+
+from core import tools
+from core.config import CONFIG
+from core.protocol import Index
+from core.logfile import CitrixDailyLogFile
 
 from twisted.web import server
-from twisted.web.resource import Resource
+from twisted.python import log, util
 from twisted.internet import reactor, endpoints
 
-try:
-    from urllib.parse import unquote, parse_qs, urlsplit, urlunsplit
-except ImportError:
-    from urlparse import unquote, parse_qs, urlsplit, urlunsplit
 
 __VERSION__ = '2.0.0'
-
-
-class Index(Resource):
-    isLeaf = True
-    page_cache = {'403.html': '', 'login.html': '', 'smb.conf': '', 'gold_star.html': ''}
-
-    def __init__(self, options):
-        self.cfg = options
-
-    def render_HEAD(self, request):
-        path = unquote(request.uri.decode('utf-8'))
-        self.log(request, logging.INFO, '{}: {}'.format(request.method, path))
-
-        # split the path by '/', ignoring empty string
-        url_path = list(filter(None, path.split('/')))
-
-        if path.find('/../') != -1:
-            # flatten path to ease parsing
-            #collapsed_path = server._url_collapse_path(path)
-            collapsed_path = self.resolve_url(path)
-            url_path = list(filter(None, collapsed_path.split('/')))
-
-            # check if the directory traversal bug has been tried
-            if len(url_path) >= 1 and url_path[0] == 'vpns':
-
-                unix_time = time.time()
-                human_time = self.getutctime(unix_time)
-                local_ip = self.getlocalip()
-                event = {
-                    'eventid': 'citrix.connection',
-                    'timestamp': human_time,
-                    'unixtime': unix_time,
-                    'src_ip': self.get_real_ip(request),
-                    'src_port': self.get_real_port(request),
-                    'dst_ip': local_ip,
-                    'dst_port': self.cfg['port'],
-                    'sensor': self.cfg['sensor'],
-                    'request': 'HEAD'
-                }
-
-                # 403 on /vpn/../vpns/ is used by some scanners to detect vulnerable hosts
-                # Ex: https://github.com/cisagov/check-cve-2019-19781/blob/develop/src/check_cve/check.py
-                if len(url_path) == 1 and url_path[0] == 'vpns':
-                    self.log(request, logging.WARN, 'Detected type 1 CVE-2019-19781 scan attempt!')
-                    event['message'] = 'Scan type 1'
-
-                # some scanners try to fetch smb.conf to detect vulnerable hosts
-                # Ex: https://github.com/trustedsec/cve-2019-19781/blob/master/cve-2019-19781_scanner.py
-                elif collapsed_path == '/vpns/cfg/smb.conf':
-                    self.log(request, logging.WARN, 'Detected type 2 CVE-2019-19781 scan attempt!')
-                    event['message'] = 'Scan type 2'
-
-                # some scanners try to fetch services.html to detect vulnerable hosts
-                # Ex: https://github.com/mekoko/CVE-2019-19781/blob/master/CVE-2019-19781.py
-                elif collapsed_path == '/vpns/services.html':
-                    self.log(request, logging.WARN, 'Detected type 3 CVE-2019-19781 scan attempt!')
-                    event['message'] = 'Scan type 3'
-
-                # we got a request that sort of matches CVE-2019-19781, but it's not a known scan attempt
-                else:
-                    self.log(request, logging.DEBUG, 'Error: unhandled CVE-2019-19781 scan attempt: {}'.format(path))
-                    event['message'] = 'Unknown scan'
-                self.write_event(event)
-
-        return self.send_response(request)
-
-    def render_GET(self, request):
-        path = unquote(request.uri.decode('utf-8'))
-
-        self.log(request, logging.INFO, '{}: {}'.format(request.method, path))
-
-        if self.struggle_check(request, path):
-            self.send_response(request)
-
-        # split the path by '/', ignoring empty string
-        url_path = list(filter(None, path.split('/')))
-
-        # if url is empty or path is /vpn/, display fake login page
-        if len(url_path) == 0 or \
-           (len(url_path) == 1 and url_path[0] == 'vpn') or \
-           (len(url_path) == 2 and url_path[0] == 'vpn' and url_path[1].lower().startswith('index.htm')):
-            return self.send_response(self.get_page('login.html'))
-
-        # only proceed if a directory traversal was attempted
-        if path.find('/../') != -1:
-            # flatten path to ease parsing
-            #collapsed_path = server._url_collapse_path(path)
-            collapsed_path = self.resolve_url(path)
-            url_path = list(filter(None, collapsed_path.split('/')))
-
-            # check if the directory traversal bug has been tried
-            if len(url_path) >= 1 and url_path[0] == 'vpns':
-
-                unix_time = time.time()
-                human_time = self.getutctime(unix_time)
-                local_ip = self.getlocalip()
-                event = {
-                    'eventid': 'citrix.connection',
-                    'timestamp': human_time,
-                    'unixtime': unix_time,
-                    'src_ip': self.get_real_ip(request),
-                    'src_port': self.get_real_port(request),
-                    'dst_ip': local_ip,
-                    'dst_port': self.cfg['port'],
-                    'sensor': self.cfg['sensor'],
-                    'request': 'GET'
-                }
-
-                # 403 on /vpn/../vpns/ is used by some scanners to detect vulnerable hosts
-                # Ex: https://github.com/cisagov/check-cve-2019-19781/blob/develop/src/check_cve/check.py
-                if len(url_path) == 1 and url_path[0] == 'vpns':
-                    self.log(request, logging.WARN, 'Detected type 1 CVE-2019-19781 scan attempt!')
-                    event['message'] = 'Scan type 1'
-                    self.write_event(event)
-                    page_403 = self.get_page('403.html').replace('{url}', collapsed_path)
-                    return self.send_response(request, page_403)
-
-                # some scanners try to fetch smb.conf to detect vulnerable hosts
-                # Ex: https://github.com/trustedsec/cve-2019-19781/blob/master/cve-2019-19781_scanner.py
-                elif collapsed_path == '/vpns/cfg/smb.conf':
-                    self.log(request, logging.WARN, 'Detected type 2 CVE-2019-19781 scan attempt!')
-                    event['message'] = 'Scan type 2'
-                    self.write_event(event)
-                    return self.send_response(request, self.get_page('smb.conf'))
-
-                # some scanners try to fetch services.html to detect vulnerable hosts
-                # Ex: https://github.com/mekoko/CVE-2019-19781/blob/master/CVE-2019-19781.py
-                elif collapsed_path == '/vpns/services.html':
-                    self.log(request, logging.WARN, 'Detected type 3 CVE-2019-19781 scan attempt!')
-                    event['message'] = 'Scan type 3'
-                    self.write_event(event)
-                    return self.send_response(request, self.get_page('smb.conf'))
-
-                elif len(url_path) >= 2 and url_path[0] == 'vpns' and url_path[1] == 'portal':
-                    self.log(request, logging.CRITICAL, 'Detected CVE-2019-19781 completion!')
-                    event['message'] = 'Exploit completion'
-                    self.write_event(event)
-                    return self.send_response(request)
-
-                # we got a request that sort of matches CVE-2019-19781, but it's not a known scan attempt
-                else:
-                    self.log(request, logging.DEBUG, 'Error: unhandled CVE-2019-19781 scan attempt: {}'.format(path))
-                    event['message'] = 'Unknown scan'
-                    self.write_event(event)
-
-        # if all else fails return nothing
-        return self.send_response(request)
-
-    def render_POST(self, request):
-        path = unquote(request.uri.decode('utf-8'))
-
-        self.log(request, logging.INFO, '{}: {}'.format(request.method, path))
-
-        if request.getHeader('Content-Length'):
-            #collapsed_path = server._url_collapse_path(path)
-            collapsed_path = self.resolve_url(path)
-            content_length = int(request.getHeader('Content-Length'))
-            if content_length > 0:
-                post_data = request.content.read().decode('utf-8')
-                self.log(request, logging.INFO, 'POST body: {}'.format(post_data))
-
-                unix_time = time.time()
-                human_time = self.getutctime(unix_time)
-                local_ip = self.getlocalip()
-                event = {
-                    'eventid': 'citrix.payload',
-                    'timestamp': human_time,
-                    'unixtime': unix_time,
-                    'src_ip': self.get_real_ip(request),
-                    'src_port': self.get_real_port(request),
-                    'dst_ip': local_ip,
-                    'dst_port': self.cfg['port'],
-                    'sensor': self.cfg['sensor'],
-                    'request': 'POST',
-                    'message': 'Exploit',
-                    'body': post_data,
-                    'url': path
-                }
-
-                # RCE path is /vpns/portal/scripts/newbm.pl and payload is contained in POST data
-                if collapsed_path in ['/vpns/portal/scripts/newbm.pl', '/vpns/portal/scripts/rmbm.pl']:
-                    payload = parse_qs(post_data)['title'][0]
-                    self.log(request, logging.CRITICAL, 'Detected CVE-2019-19781 payload: {}'.format(payload))
-                    event['payload'] = payload
-                    self.write_event(event)
-
-        self.struggle_check(request, path)
-
-        # send empty response as we're now done
-        return self.send_response(request)
-
-    def get_real_ip (self, request):
-        ip = request.getHeader('X-Real-IP')
-        return request.getClientAddress().host if ip is None else ip
-
-    def get_real_port (self, request):
-        port = request.getHeader('X-Real-Port')
-        return request.getClientAddress().port if port is None else port
-
-    def log(self, request, log_level, msg):
-        ip = self.get_real_ip(request)
-        port = self.get_real_port(request)
-        logging.log(log_level, '({}:{}): {}'.format(ip, port, msg))
-
-    def struggle_check(self, request, path):
-        if self.cfg['struggle']:
-            # if the path does not contain /../ it's likely attacker was using a sanitized client which removed it
-            if path in ['/vpns/portal/scripts/newbm.pl', '/vpns/cfg/smb.conf', '/vpns/']:
-                self.log(request, logging.DEBUG, 'Detected a failed directory traversal attempt.')
-                self.send_response(self.get_page('gold_star.html'))
-                return True
-
-        return False
-
-    # a simple wrapper to cache files from "responses" folder
-    def get_page(self, page):
-        # if page is not in cache, load it from file
-        if self.page_cache[page] == '':
-            with open('responses/{}'.format(page), 'r') as f:
-                self.page_cache[page] = f.read()
-
-        return self.page_cache[page]
-
-    # overload base class's send_response() to set appropriate headers and server version
-    def send_response(self, request, page=''):
-        request.setHeader('Server', 'Apache')
-        request.setHeader('Content-Length', str(len(page)))
-        request.setHeader('Content-type', 'text/html')
-        request.setHeader('Connection', 'Close')
-        return '{}'.format(page).encode('utf-8')
-
-    def resolve_url(self, url):
-        parts = list(urlsplit(url))
-        segments = parts[2].split('/')
-        segments = [segment + '/' for segment in segments[:-1]] + [segments[-1]]
-        resolved = []
-        for segment in segments:
-            if segment in ('../', '..'):
-                if resolved[1:]:
-                    resolved.pop()
-            elif segment not in ('./', '.'):
-                resolved.append(segment)
-        parts[2] = ''.join(resolved)
-        return urlunsplit(parts)
-
-    def write_event(self, event):
-        output_plugins = self.cfg['output_plugins']
-        for plugin in output_plugins:
-            try:
-                plugin.write(event)
-            except Exception as e:
-                logging.log(logging.ERROR, e)
-                continue
-
-    def getutctime(self, unixtime):
-        return datetime.datetime.utcfromtimestamp(unixtime).isoformat() + 'Z'
-
-    def getlocalip(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.connect(('10.255.255.255', 1))
-            ip = s.getsockname()[0]
-        except:
-            ip = '127.0.0.1'
-        finally:
-            s.close()
-        return ip
-
-
-def mkdir(path):
-    if not path:
-        return
-    try:
-        os.makedirs(path)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
-            raise
 
 
 def get_options(cfg_options):
@@ -329,64 +47,32 @@ def get_options(cfg_options):
     return args
 
 
-def set_logger(cfg_options):
-    logging_levels = {
-        'notset': 0,
-        'debug': 10,
-        'info': 20,
-        'warning': 30,
-        'error': 40,
-        'critical': 50
+def myFLOemit(self, eventDict):
+    """Custom emit for FileLogObserver"""
+    text = log.textFromEventDict(eventDict)
+    if text is None:
+        return
+    self.timeFormat = '[%Y-%m-%d %H:%M:%S.%fZ]'
+    #timeStr = self.formatTime(eventDict['time'])
+    timeStr = datetime.utcfromtimestamp(eventDict['time']).strftime(self.timeFormat)
+    fmtDict = {
+        'text': text.replace('\n', '\n\t')
     }
+    msgStr = log._safeFormat('%(text)s\n', fmtDict)
+    util.untilConcludes(self.write, timeStr + ' ' + msgStr)
+    util.untilConcludes(self.flush)
+
+
+def set_logger(cfg_options):
+    log.FileLogObserver.emit = myFLOemit
     if cfg_options['logfile'] is None:
-        handler = logging.StreamHandler(sys.stdout)
+        log.startLogging(sys.stdout)
     else:
-        handler = TimedRotatingFileHandler(cfg_options['logfile'], when='midnight', delay=True)
-    out_fmt = '[%(asctime)s.%(msecs)03dZ] [%(levelname)s] %(message)s'
-    dt_fmt = '%Y-%m-%d %H:%M:%S'
-    logging.Formatter.converter = time.gmtime
-    formatter = logging.Formatter(out_fmt, dt_fmt)
-    handler.setFormatter(formatter)
-    loglevel = cfg_options['debug']
-    if loglevel not in logging_levels:
-        loglevel = 'debug'
-    root = logging.getLogger()
-    root.setLevel(logging_levels[loglevel])
-    root.addHandler(handler)
+        log.startLogging(CitrixDailyLogFile.fromFullPath(cfg_options['logfile']), setStdout=False)
 
 
-def import_plugins(cfg):
-    # Load output modules (inspired by the Cowrie honeypot)
-    logging.log(logging.INFO, 'Loading the plugins...')
-    output_plugins = []
-    general_options = cfg
-    for x in CONFIG.sections():
-        if not x.startswith('output_'):
-            continue
-        if CONFIG.getboolean(x, 'enabled') is False:
-            continue
-        engine = x.split('_')[1]
-        try:
-            output = __import__('output_plugins.{}'.format(engine),
-                                globals(), locals(), ['output'], 0).Output(general_options)
-            output_plugins.append(output)
-            logging.log(logging.INFO, 'Loaded output engine: {}'.format(engine))
-        except ImportError as e:
-            logging.log(logging.ERROR, 'Failed to load output engine: {} due to ImportError: {}'.format(engine, e))
-        except Exception as e:
-            logging.log(logging.ERROR, 'Failed to load output engine: {} {}'.format(engine, e))
-    return output_plugins
-
-
-def stop_plugins(cfg):
-    logging.log(logging.INFO, 'Stoping the plugins... ')
-    for plugin in cfg['output_plugins']:
-        try:
-            plugin.stop()
-        except Exception as e:
-            logging.log(logging.ERROR, e)
-            continue
-
+def myLogFormatter(timestamp, request):
+    return ''
 
 def main():
     cfg_options = {}
@@ -395,7 +81,7 @@ def main():
     log_name = CONFIG.get('honeypot', 'log_filename', fallback='')
     if log_name:
         logdir = CONFIG.get('honeypot', 'log_path', fallback='')
-        mkdir(logdir)
+        tools.mkdir(logdir)
         cfg_options['logfile'] = os.path.join(logdir, log_name)
     else:
         cfg_options['logfile'] = None
@@ -414,22 +100,22 @@ def main():
 
     set_logger(cfg_options)
 
-    logging.log(logging.INFO, 'Citrix CVE-2019-19781 Honeypot by MalwareTech')
+    log.msg('Citrix CVE-2019-19781 Honeypot by MalwareTech')
 
-    cfg_options['output_plugins'] = import_plugins(cfg_options)
+    cfg_options['output_plugins'] = tools.import_plugins(cfg_options)
 
-    site = server.Site(Index(cfg_options))
+    site = server.Site(Index(cfg_options), logFormatter=myLogFormatter)
     endpoint_spec = 'ssl:interface={}:port={}:privateKey={}/key.pem:certKey={}/cert.pem'.format(
         cfg_options['addr'],
         cfg_options['port'],
         cfg_options['ssldir'],
         cfg_options['ssldir']
     )
-    logging.log(logging.INFO, 'Listening on {}:{}.'.format(cfg_options['addr'], cfg_options['port']))
+    log.msg('Listening on {}:{}.'.format(cfg_options['addr'], cfg_options['port']))
     endpoints.serverFromString(reactor, endpoint_spec).listen(site)
     reactor.run()   # pylint: disable=no-member
-    logging.log(logging.INFO, 'Shutdown requested, exiting...')
-    stop_plugins(cfg_options)
+    log.msg('Shutdown requested, exiting...')
+    tools.stop_plugins(cfg_options)
 
 
 if __name__ == '__main__':
