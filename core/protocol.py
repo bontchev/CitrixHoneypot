@@ -173,6 +173,7 @@ class Index(Resource):
                 tools.logger(request, 'INFO', 'POST body: {}'.format(post_data))
                 human_time = tools.getutctime(unix_time)
                 local_ip = tools.getlocalip()
+                payload = parse_qs(post_data)['title'][0]
                 event = {
                     'eventid': 'citrix.payload',
                     'timestamp': human_time,
@@ -185,14 +186,13 @@ class Index(Resource):
                     'request': 'POST',
                     'message': 'Exploit',
                     'body': post_data,
+                    'payload': payload,
                     'url': path
                 }
 
                 # RCE path is /vpns/portal/scripts/newbm.pl and payload is contained in POST data
                 if collapsed_path in ['/vpns/portal/scripts/newbm.pl', '/vpns/portal/scripts/rmbm.pl']:
-                    payload = parse_qs(post_data)['title'][0]
                     tools.logger(request, 'CRITICAL', 'Detected CVE-2019-19781 payload: {}'.format(payload))
-                    event['payload'] = payload
 
                 tools.write_event(event, self.cfg)
 

@@ -1,22 +1,25 @@
 CREATE TABLE IF NOT EXISTS `connections` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `timestamp` datetime DEFAULT NULL,
-  `sensor` int(4) DEFAULT NULL,
   `ip` varchar(15) DEFAULT NULL,
   `local_port` int(11) DEFAULT NULL,
   `request` varchar(6) DEFAULT NULL,
-  `path` varchar(256) DEFAULT NULL,
+  `path` int(4) DEFAULT NULL,
   `body` int(4) DEFAULT NULL,
   `payload` int(4) DEFAULT NULL,
   `message` int(4) DEFAULT NULL,
   `local_host` varchar(15) DEFAULT NULL,
   `remote_port` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `sensor` int(4) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `time_idx` (`timestamp`),
+  KEY `ip_idx` (`ip`),
+  KEY `ip2_idx` (`timestamp`, `ip`)
 );
 
-CREATE TABLE IF NOT EXISTS `sensors` (
+CREATE TABLE IF NOT EXISTS `paths` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) DEFAULT NULL,
+  `path` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
 );
 
@@ -40,6 +43,13 @@ CREATE TABLE IF NOT EXISTS `messages` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `message` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
+);
+
+CREATE TABLE IF NOT EXISTS `sensors` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE (`name`)
 );
 
 CREATE TABLE IF NOT EXISTS `geolocation` (
