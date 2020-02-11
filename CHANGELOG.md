@@ -11,3 +11,4 @@
 * Implemented output plugin support
 * Implemented an output plugin for JSON
 * Implemented log rotation
+* Implemented an output plugin for MySQL
