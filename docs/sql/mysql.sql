@@ -61,6 +61,6 @@ CREATE TABLE IF NOT EXISTS `geolocation` (
   `org` varchar(128) DEFAULT '',
   `org_asn` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE('ip')
+  UNIQUE(`ip`)
 );
 

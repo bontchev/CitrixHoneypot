@@ -50,6 +50,7 @@ venv/
 ENV/
 adbh_env/
 *_env/
+*-env/
 
 # Log files
 log/

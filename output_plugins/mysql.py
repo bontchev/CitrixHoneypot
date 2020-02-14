@@ -2,7 +2,6 @@
 import time
 import MySQLdb
 import hashlib
-import requests
 import geoip2.database
 
 import core.output
@@ -120,7 +119,7 @@ class Output(core.output.Output):
     @defer.inlineCallbacks
     def _get_id(self, table, column, entry):
         try:
-            r = yield self.dbh.runQuery("SELECT id, {} FROM {} WHERE name='{}'".format(column, table, entry))
+            r = yield self.dbh.runQuery("SELECT id, {} FROM {} WHERE {}='{}'".format(column, table, column, entry))
             if r:
                 id = r[0][0]
             else:
@@ -130,7 +129,8 @@ class Output(core.output.Output):
         except Exception as e:
             self._local_log(e)
             id = None
-        return id
+        yield id
+        return
 
     @defer.inlineCallbacks
     def _get_hashed_id(self, table, entry):
@@ -148,7 +148,8 @@ class Output(core.output.Output):
             except Exception as e:
                 self._local_log(e)
                 id = 0
-        return id
+        yield id
+        return
 
     @defer.inlineCallbacks
     def _connect_event(self, event, has_payload):
