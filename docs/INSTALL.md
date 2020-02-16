@@ -5,10 +5,12 @@
   - [Step 2: Open the firewall for port 443 traffic](#step-2-open-the-firewall-for-port-443-traffic)
   - [Step 3: Create a user account](#step-3-create-a-user-account)
   - [Step 4: Checkout the code](#step-4-checkout-the-code)
-  - [Step 5: Setup Virtual Environment](#step-5-setup-virtual-environment)
-  - [Step 6: Create a configuration file](#step-6-create-a-configuration-file)
-  - [Step 7: Starting CitrixHoneypot](#step-7-starting-citrixhoneypot)
+  - [Step 5: Create a self-signed certificate](#step-5-create-a-self-signed-certificate)
+  - [Step 6: Setup Virtual Environment](#step-6-setup-virtual-environment)
+  - [Step 7: Create a configuration file](#step-7-create-a-configuration-file)
+  - [Step 8: Starting CitrixHoneypot](#step-8-starting-citrixhoneypot)
   - [Configure Additional Output Plugins (OPTIONAL)](#configure-additional-output-plugins-optional)
+  - [Docker Usage (Optional)](#docker-usage-optional)
   - [Command-line options](#command-line-options)
   - [Upgrading CitrixHoneypot](#upgrading-citrixhoneypot)
 
@@ -94,16 +96,23 @@ $ sudo su - citrix
 ```bash
 $ git clone https://gitlab.com/bontchev/CitrixHoneypot.git
 Cloning into 'CitrixHoneypot'...
-remote: Enumerating objects: 58, done.
-remote: Counting objects: 100% (58/58), done.
-remote: Compressing objects: 100% (40/40), done.
-Uremote: Total 58 (delta 19), reused 47 (delta 13)npacking objects:  27% (16/58)
-Unpacking objects: 100% (58/58), done.
+remote: Enumerating objects: 116, done.
+remote: Counting objects: 100% (116/116), done.
+remote: Compressing objects: 100% (62/62), done.
+remote: Total 116 (delta 56), reused 90 (delta 45), pack-reused 0
+Receiving objects: 100% (116/116), 61.36 KiB | 1.75 MiB/s, done.
+Resolving deltas: 100% (56/56), done.
 
 $ cd CitrixHoneypot
 ```
 
-## Step 5: Setup Virtual Environment
+## Step 5: Create a self-signed certificate
+
+```bash
+openssl req -newkey rsa:2048 -nodes -keyout ssl/key.pem -x509 -days 365 -out ssl/cert.pem
+```
+
+## Step 6: Setup Virtual Environment
 
 Next you need to create your virtual environment:
 
@@ -123,7 +132,7 @@ $ source citrix-env/bin/activate
 (citrix-env) $ pip install --upgrade -r requirements.txt
 ```
 
-## Step 6: Create a configuration file
+## Step 7: Create a configuration file
 
 The configuration for the honeypot is stored in `etc/citrixhoneypot.cfg.base` and
 `etc/citrixhoneypot.cfg`. Both files are read on startup but the entries from
@@ -132,7 +141,7 @@ settings and can be overwritten by upgrades, while `citrixhoneypot.cfg` will not
 touched. To run with a standard configuration, there is no need to change
 anything.
 
-For instance, in order to enable JSON logging, create `etc/adbhoney.cfg` and
+For instance, in order to enable JSON logging, create `etc/citrixhoneypot.cfg` and
 put in it only the following:
 
 ```citrixhoneypot.cfg
@@ -146,7 +155,7 @@ For more information about how to configure additional output plugins (from
 the available ones), please consult the appropriate `README.md` file in the
 subdirectory corresponding to the plugin inside the `docs` directory.
 
-## Step 7: Starting CitrixHoneypot
+## Step 8: Starting CitrixHoneypot
 
 Before starting the honeypot, make sure that you have specified correctly
 where it should look for the virtual environment. This documentation suggests
@@ -190,6 +199,13 @@ Supported output plugins include:
 More plugins are likely to be added in the future.
 
 See `docs/[Output Plugin]/README.md` for details.
+
+## Docker Usage (Optional)
+
+```bash
+docker build -t citrixhoneypot .
+docker run -d -p 443:443 -v /<insert-homepath>/CitrixHoneypot:/CitrixHoneypot -w /CitrixHoneypot citrixhoneypot
+```
 
 ## Command-line options
 
