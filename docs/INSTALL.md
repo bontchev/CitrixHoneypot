@@ -3,6 +3,7 @@
 - [Installation guide (on Ubuntu 16.04)](#installation-guide-on-ubuntu-1604)
   - [Step 1: Install the dependencies](#step-1-install-the-dependencies)
   - [Step 2: Open the firewall for port 443 traffic](#step-2-open-the-firewall-for-port-443-traffic)
+    - [Step 2a: Create a reverse proxy (OPTIONAL)](#step-2a-create-a-reverse-proxy-optional)
   - [Step 3: Create a user account](#step-3-create-a-user-account)
   - [Step 4: Checkout the code](#step-4-checkout-the-code)
   - [Step 5: Create a self-signed certificate](#step-5-create-a-self-signed-certificate)
@@ -41,6 +42,8 @@ If your honeypot machine is behind a NAT router, you must open the router
 for traffic coming over port 443 too. How exactly this is done depends on
 the router model; please consult the instruction manual of the router.
 
+### Step 2a: Create a reverse proxy (OPTIONAL)
+
 Have in mind that if the machine you're installing the honeypot on is already
 running a web server, the latter is already listening to port 443. Two programs
 cannot listen to the same port, so in such a case we need a little trick.
@@ -63,10 +66,55 @@ server {
     location /vpn {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Real-Port $remote_port;
+        proxy_set_header X-Real-Port $server_port;
         proxy_pass https://localhost:4443;
     }
 }
+```
+
+If your web server is Apache (warning: I don't have experience with it myself,
+so the following information might not be entirely correct), first you need to
+locate its configuration file. It most likely resides in
+`/etc/apache2/apache2.conf` but if it is not, run the command
+
+```bash
+`apache2 -V | grep -F SERVER_CONFIG_FILE`
+```
+
+(On other Linux distributions, like CentOS or RedHat, you might have to use
+`httpd` instead of `apache2`.)
+
+Make sure the relevant modules are installed and enabled:
+
+```bash
+sudo apt-get install libapache2-mod-proxy-html a2enmod mod_proxy
+sudo a2enmod remoteip
+sudo a2enmod mod_proxy_http
+```
+
+In `apache2.conf`, define a reverse proxy:
+
+```apache2.conf
+Listen 443
+<VirtualHost *:443>
+    ServerName your.fqdn.name
+    SSLProxyEngine on
+    ProxyPreserveHost On
+
+    <Location "/vpn">
+        ProxyPass "https://localhost:4443/"
+        ProxyPassReverse "https://localhost:4443/"
+        RequestHeader set X-Real-IP "%{REMOTE_ADDR}s"
+        RequestHeader set X-Real-Port "%{SERVER_PORT}s"
+    </Location>
+
+</VirtualHost>
+```
+
+Finally, reload the web server:
+
+```bash
+sudo service apache2 reload
 ```
 
 ## Step 3: Create a user account

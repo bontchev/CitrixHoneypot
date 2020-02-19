@@ -164,7 +164,6 @@ class Index(Resource):
         tools.logger(request, 'INFO', '{}: {}'.format(request.method, path))
 
         if request.getHeader('Content-Length'):
-            #collapsed_path = server._url_collapse_path(path)
             collapsed_path = tools.resolve_url(path)
             content_length = int(request.getHeader('Content-Length'))
             if content_length > 0:
