@@ -8,20 +8,17 @@ This software is free to use providing the user yells
 """
 
 import os
-import sys
-import time
 import socket
 
-from datetime import datetime
 from argparse import ArgumentParser
 
 from core import tools
 from core.config import CONFIG
 from core.protocol import Index
-from core.logfile import CitrixDailyLogFile
+from core.logfile import set_logger
 
 from twisted.web import server
-from twisted.python import log, util
+from twisted.python import log
 from twisted.internet import reactor, endpoints
 
 
@@ -47,31 +44,11 @@ def get_options(cfg_options):
     return args
 
 
-def myFLOemit(self, eventDict):
-    """Custom emit for FileLogObserver"""
-    text = log.textFromEventDict(eventDict)
-    if text is None:
-        return
-    self.timeFormat = '[%Y-%m-%d %H:%M:%S.%fZ]'
-    #timeStr = self.formatTime(eventDict['time'])
-    timeStr = datetime.utcfromtimestamp(eventDict['time']).strftime(self.timeFormat)
-    fmtDict = {
-        'text': text.replace('\n', '\n\t')
-    }
-    msgStr = log._safeFormat('%(text)s\n', fmtDict)
-    util.untilConcludes(self.write, timeStr + ' ' + msgStr)
-    util.untilConcludes(self.flush)
-
-
-def set_logger(cfg_options):
-    log.FileLogObserver.emit = myFLOemit
-    if cfg_options['logfile'] is None:
-        log.startLogging(sys.stdout)
-    else:
-        log.startLogging(CitrixDailyLogFile.fromFullPath(cfg_options['logfile']), setStdout=False)
-
-
 def myLogFormatter(timestamp, request):
+    """
+    Empty log formatter to suppress the normal logging of
+    the web requests, since we'll be doing our own logging.
+    """
     return ''
 
 def main():
