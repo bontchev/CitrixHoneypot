@@ -1,15 +1,5 @@
 #!/bin/bash
 
-citrixhoneypot_directory() {
-    if [[ "$0" = /* ]]
-    then
-        CITRIXHONEYPOTDIR=$(dirname "$0")/..
-    else
-        CITRIXHONEYPOTDIR=$(dirname "$PWD"/"$0")/..
-    fi
-    CITRIXHONEYPOTDIR=$(cd "${CITRIXHONEYPOTDIR}" && pwd -P 2>/dev/null || pwd)
-}
-
 citrixhoneypot_directory "$0"
 config_dir=${CITRIXHONEYPOTDIR}/etc
 config_file_name=${config_dir}/citrixhoneypot-launch.cfg
@@ -26,18 +16,31 @@ config_get() {
     printf -- "%s" "${val}";
 }
 
-#CITRIX_VIRTUAL_ENV="$(config_get CITRIX_VIRTUAL_ENV)";
+CITRIX_VIRTUAL_ENV="$(config_get CITRIX_VIRTUAL_ENV)";
+AUTHBIND_ENABLED="$(config_get AUTHBIND_ENABLED)";
+DAEMONIZE="$(config_get DAEMONIZE)";
+UMASK="$(config_get UMASK)";
 
-#activate_venv() {
-#    # Activate Python virtual environment
-#    VENV="$1"
-#    if [ ! -f "$VENV/bin/activate" ]
-#    then
-#        return 1
-#    fi
-#    . $VENV/bin/activate
-#    return 0
-#}
+citrixhoneypot_directory() {
+    if [[ "$0" = /* ]]
+    then
+        CITRIXHONEYPOTDIR=$(dirname "$0")/..
+    else
+        CITRIXHONEYPOTDIR=$(dirname "$PWD"/"$0")/..
+    fi
+    CITRIXHONEYPOTDIR=$(cd "${CITRIXHONEYPOTDIR}" && pwd -P 2>/dev/null || pwd)
+}
+
+activate_venv() {
+    # Activate Python virtual environment
+    VENV="$1"
+    if [ ! -f "$VENV/bin/activate" ]
+    then
+        return 1
+    fi
+    source $VENV/bin/activate
+    return 0
+}
 
 citrixhoneypot_status() {
     # Print status
@@ -59,10 +62,43 @@ citrixhoneypot_start() {
     # Start CitrixHoneypot
     citrixhoneypot_status
     PID=$(cat "${PIDFILE}" 2>/dev/null || echo -n "")
-    if [ -z "$PID" ]; then
-        echo "Starting CitrixHoneypot ..."
-        nohup python "${CITRIXHONEYPOTDIR}/CitrixHoneypot.py" &>/dev/null & echo $! > "${CITRIXHONEYPOTDIR}/${PIDFILE}"
-        echo 2>&1 "CitrixHoneypot is started successfully."
+
+    CITRIXARGS="$*"
+    TWISTEDARGS="${DAEMONIZE} ${XARGS} --umask ${UMASK} --pidfile ${PIDFILE}"
+
+    # For Docker log to stdout, for non-Docker log to file
+    if [ "$DOCKER" = "yes" ]
+    then
+        TWISTEDARGS="${TWISTEDARGS} -l -"
+    else
+        TWISTEDARGS="${TWISTEDARGS} --logger core.tools.logger"
+    fi
+
+    if [ ! -z "$VIRTUAL_ENV" ]
+    then
+        echo 2>&1 "Using activated Python virtual environment \"$VIRTUAL_ENV\""
+    elif activate_venv "$CITRIX_VIRTUAL_ENV"
+    then
+        echo 2>&1 "Using custom Python virtual environment \"$VIRTUAL_ENV\""
+    elif activate_venv "$DEFAULT_VIRTUAL_ENV"
+    then
+        echo 2>&1 "Using default Python virtual environment \"$VIRTUAL_ENV\""
+    else
+        echo 2>&1 "Not using Python virtual environment"
+    fi
+
+    echo "Starting CitrixHoneypot: [twistd ${TWISTEDARGS} citrixhoneypot ${CITRIXARGS}]..."
+    if [ "$AUTHBIND_ENABLED" = "no" ]
+    then
+        twistd ${TWISTEDARGS} ${CITRIXARGS} citrixhoneypot
+    else
+        authbind --deep twistd ${TWISTEDARGS} ${CITRIXARGS} citrixhoneypot
+    fi
+
+#    if [ -z "$PID" ]; then
+#        echo "Starting CitrixHoneypot ..."
+#        nohup python "${CITRIXHONEYPOTDIR}/CitrixHoneypot.py" &>/dev/null & echo $! > "${CITRIXHONEYPOTDIR}/${PIDFILE}"
+#        echo 2>&1 "CitrixHoneypot is started successfully."
 #        if [ ! -z "$VIRTUAL_ENV" ]; then
 #            echo 2>&1 "Using activated Python virtual environment \"$VIRTUAL_ENV\". CitrixHoneypot is started successfully."
 #            nohup python ${CITRIXHONEYPOTDIR}/CitrixHoneypot.py &>/dev/null & echo $! > ${CITRIXHONEYPOTDIR}/${PIDFILE}
@@ -72,7 +108,7 @@ citrixhoneypot_start() {
 #        else
 #            echo 2>&1 "Can't activate virtual environment \"$CITRIX_VIRTUAL_ENV\"."
 #        fi
-    fi
+#    fi
 }
 
 citrixhoneypot_stop() {
