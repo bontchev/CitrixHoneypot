@@ -4,6 +4,7 @@
   - [Step 1: Install the dependencies](#step-1-install-the-dependencies)
   - [Step 2: Open the firewall for port 443 traffic](#step-2-open-the-firewall-for-port-443-traffic)
     - [Step 2a: Create a reverse proxy (OPTIONAL)](#step-2a-create-a-reverse-proxy-optional)
+    - [Step 2b: Port redirection (OPTIONAL)](#step-2b-port-redirection-optional)
   - [Step 3: Create a user account](#step-3-create-a-user-account)
   - [Step 4: Checkout the code](#step-4-checkout-the-code)
   - [Step 5: Create a self-signed certificate](#step-5-create-a-self-signed-certificate)
@@ -116,6 +117,42 @@ Finally, reload the web server:
 ```bash
 sudo service apache2 reload
 ```
+
+### Step 2b: Port redirection (OPTIONAL)
+
+If you're not using a reverse proxy and have the honeypot listen to the
+Internet directly, have in mind that by default CitrixHoneypot listens on port
+443 (like a real NetScaler device), although this could be modified from the
+configuration file. However, most Linux distributions do not allow non-root
+users to listen on ports lower than 1024 - and running the honeypot as `root`
+is not advisable, for security reasons.
+
+There are two possible approaches for solving this problem. One is to redirect
+the incoming traffic from port 443 to some other port, e.g., 4443 at the
+firewall and to configure the honeypot to listen to that port. This has
+system-wide implications and has to be done from a user who can `sudo` (i.e,
+not from the user `citrix` - but after this user has been created in
+[step 3](#step-3-create-a-user-account)):
+
+```bash
+$ sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 4443
+```
+
+Note that you should test this rule only from another host; it doesn't apply
+to loopback connections.
+
+The second way is to use authbind and allow the honeypot to listen to port 443
+directly:
+
+```bash
+$ sudo apt-get install authbind
+$ sudo touch /etc/authbind/byport/443
+$ sudo chown citrix:citrix /etc/authbind/byport/443
+$ sudo chmod 770 /etc/authbind/byport/443
+```
+
+Then edit the file `etc/citrixhoneypot-launch.cgf` and modify the
+AUTHBIND_ENABLED setting after [step 7](#step-7-create-a-configuration-file).
 
 ## Step 3: Create a user account
 
