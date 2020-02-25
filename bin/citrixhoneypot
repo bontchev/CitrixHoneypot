@@ -1,8 +1,15 @@
 #!/bin/bash
 
-citrixhoneypot_directory "$0"
-config_dir=${CITRIXHONEYPOTDIR}/etc
-config_file_name=${config_dir}/citrixhoneypot-launch.cfg
+citrixhoneypot_directory() {
+    if [[ "$0" = /* ]]
+    then
+        CITRIXHONEYPOTDIR=$(dirname "$0")/..
+    else
+        CITRIXHONEYPOTDIR=$(dirname "$PWD"/"$0")/..
+    fi
+#    CITRIXHONEYPOTDIR=$(cd "${CITRIXHONEYPOTDIR}" && pwd -P 2>/dev/null || pwd)
+    CITRIXHONEYPOTDIR=$(if cd "${CITRIXHONEYPOTDIR}"; then pwd -P 2>/dev/null; else pwd; fi)
+}
 
 config_read_file() {
     (grep -E "^${2}=" -m 1 "${1}" 2>/dev/null || echo "VAR=__UNDEFINED__") | head -n 1 | cut -d '=' -f 2-;
@@ -16,21 +23,6 @@ config_get() {
     printf -- "%s" "${val}";
 }
 
-CITRIX_VIRTUAL_ENV="$(config_get CITRIX_VIRTUAL_ENV)";
-AUTHBIND_ENABLED="$(config_get AUTHBIND_ENABLED)";
-DAEMONIZE="$(config_get DAEMONIZE)";
-UMASK="$(config_get UMASK)";
-
-citrixhoneypot_directory() {
-    if [[ "$0" = /* ]]
-    then
-        CITRIXHONEYPOTDIR=$(dirname "$0")/..
-    else
-        CITRIXHONEYPOTDIR=$(dirname "$PWD"/"$0")/..
-    fi
-    CITRIXHONEYPOTDIR=$(cd "${CITRIXHONEYPOTDIR}" && pwd -P 2>/dev/null || pwd)
-}
-
 activate_venv() {
     # Activate Python virtual environment
     VENV="$1"
@@ -38,7 +30,7 @@ activate_venv() {
     then
         return 1
     fi
-    source $VENV/bin/activate
+    source "$VENV/bin/activate"
     return 0
 }
 
@@ -63,52 +55,29 @@ citrixhoneypot_start() {
     citrixhoneypot_status
     PID=$(cat "${PIDFILE}" 2>/dev/null || echo -n "")
 
-    CITRIXARGS="$*"
-    TWISTEDARGS="${DAEMONIZE} ${XARGS} --umask ${UMASK} --pidfile ${PIDFILE}"
-
-    # For Docker log to stdout, for non-Docker log to file
-    if [ "$DOCKER" = "yes" ]
-    then
-        TWISTEDARGS="${TWISTEDARGS} -l -"
-    else
-        TWISTEDARGS="${TWISTEDARGS} --logger core.tools.logger"
-    fi
-
     if [ ! -z "$VIRTUAL_ENV" ]
     then
         echo 2>&1 "Using activated Python virtual environment \"$VIRTUAL_ENV\""
     elif activate_venv "$CITRIX_VIRTUAL_ENV"
     then
-        echo 2>&1 "Using custom Python virtual environment \"$VIRTUAL_ENV\""
+        echo 2>&1 "Using custom Python virtual environment \"$CITRIX_VIRTUAL_ENV\""
     elif activate_venv "$DEFAULT_VIRTUAL_ENV"
     then
-        echo 2>&1 "Using default Python virtual environment \"$VIRTUAL_ENV\""
+        echo 2>&1 "Using default Python virtual environment \"$DEFAULT_VIRTUAL_ENV\""
     else
         echo 2>&1 "Not using Python virtual environment"
     fi
 
-    echo "Starting CitrixHoneypot: [twistd ${TWISTEDARGS} citrixhoneypot ${CITRIXARGS}]..."
-    if [ "$AUTHBIND_ENABLED" = "no" ]
-    then
-        twistd ${TWISTEDARGS} ${CITRIXARGS} citrixhoneypot
-    else
-        authbind --deep twistd ${TWISTEDARGS} ${CITRIXARGS} citrixhoneypot
+    if [ -z "$PID" ]; then
+        echo "Starting CitrixHoneypot ..."
+        if [ "$AUTHBIND_ENABLED" = "no" ]
+        then
+            nohup python "${CITRIXHONEYPOTDIR}/CitrixHoneypot.py" &>/dev/null & echo $! >"${CITRIXHONEYPOTDIR}/${PIDFILE}"
+        else
+            nohup authbind --deep python "${CITRIXHONEYPOTDIR}/CitrixHoneypot.py" &>/dev/null & echo $! >"${CITRIXHONEYPOTDIR}/${PIDFILE}"
+        fi
+        echo 2>&1 "CitrixHoneypot was started successfully."
     fi
-
-#    if [ -z "$PID" ]; then
-#        echo "Starting CitrixHoneypot ..."
-#        nohup python "${CITRIXHONEYPOTDIR}/CitrixHoneypot.py" &>/dev/null & echo $! > "${CITRIXHONEYPOTDIR}/${PIDFILE}"
-#        echo 2>&1 "CitrixHoneypot is started successfully."
-#        if [ ! -z "$VIRTUAL_ENV" ]; then
-#            echo 2>&1 "Using activated Python virtual environment \"$VIRTUAL_ENV\". CitrixHoneypot is started successfully."
-#            nohup python ${CITRIXHONEYPOTDIR}/CitrixHoneypot.py &>/dev/null & echo $! > ${CITRIXHONEYPOTDIR}/${PIDFILE}
-#        elif activate_venv "$CITRIX_VIRTUAL_ENV"; then
-#            nohup python ${CITRIXHONEYPOTDIR}/CitrixHoneypot.py &>/dev/null & echo $! > ${CITRIXHONEYPOTDIR}/${PIDFILE}
-#            echo 2>&1 "CitrixHoneypot is started successfully."
-#        else
-#            echo 2>&1 "Can't activate virtual environment \"$CITRIX_VIRTUAL_ENV\"."
-#        fi
-#    fi
 }
 
 citrixhoneypot_stop() {
@@ -154,6 +123,12 @@ then
 fi
 
 citrixhoneypot_directory "$0"
+config_dir=${CITRIXHONEYPOTDIR}/etc
+config_file_name=${config_dir}/citrixhoneypot-launch.cfg
+
+CITRIX_VIRTUAL_ENV="$(config_get CITRIX_VIRTUAL_ENV)";
+AUTHBIND_ENABLED="$(config_get AUTHBIND_ENABLED)";
+
 cd "${CITRIXHONEYPOTDIR}"
 PIDFILE=citrixhoneypot.pid
 set -e

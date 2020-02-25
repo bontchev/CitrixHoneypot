@@ -30,8 +30,8 @@ log_path = log
 
 # Log file name
 #
-# (default: stdout)
-log_filename =
+# (default: citrix.log)
+#log_filename = citrix.log
 
 # Directory containing the SSL certificate
 #
@@ -102,9 +102,9 @@ log_filename =
 #password = secret
 #port = 3306
 #debug = false
-#Whether to store geolocation data in the database
+# Whether to store geolocation data in the database
 #geoip = true
-#Location of the databases used for geolocation
+# Location of the databases used for geolocation
 #geoip_citydb = data/GeoLite2-City.mmdb
 #geoip_asndb = data/GeoLite2-ASN.mmdb
 
