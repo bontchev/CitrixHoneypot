@@ -1,4 +1,4 @@
-# Honepot for CVE-2019-19781 (Citrix ADC)
+# Honeypot for CVE-2019-19781 (Citrix ADC)
 
 Detect and log CVE-2019-19781 scan and exploitation attempts. Based on
 [MalwareTech's Citrix honeypot](https://github.com/MalwareTech/CitrixHoneypot)
