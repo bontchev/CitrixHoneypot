@@ -44,12 +44,13 @@ def get_options(cfg_options):
     return args
 
 
-def myLogFormatter(timestamp, request):
+def mySiteLog(request):
     """
     Empty log formatter to suppress the normal logging of
     the web requests, since we'll be doing our own logging.
     """
-    return ''
+    return
+
 
 def main():
     cfg_options = {}
@@ -81,7 +82,8 @@ def main():
 
     cfg_options['output_plugins'] = tools.import_plugins(cfg_options)
 
-    site = server.Site(Index(cfg_options), logFormatter=myLogFormatter)
+    site = server.Site(Index(cfg_options))
+    site.log = mySiteLog
     endpoint_spec = 'ssl:interface={}:port={}:privateKey={}/key.pem:certKey={}/cert.pem'.format(
         cfg_options['addr'],
         cfg_options['port'],
