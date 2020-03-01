@@ -1,15 +1,15 @@
-# Sending the Output of CitrixHoneypot to a MySQL Database
+# Sending the Output of the honeypot to a MySQL Database
 
-- [Sending the Output of CitrixHoneypot to a MySQL Database](#sending-the-output-of-citrixhoneypot-to-a-mysql-database)
+- [Sending the Output of the honeypot to a MySQL Database](#sending-the-output-of-the-honeypot-to-a-mysql-database)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
   - [MySQL Configuration](#mysql-configuration)
-  - [CitrixHoneypot Configuration](#citrixhoneypot-configuration)
-  - [Restart CitrixHoneypot](#restart-citrixhoneypot)
+  - [Honeypot Configuration](#honeypot-configuration)
+  - [Restart the honeypot](#restart-the-honeypot)
 
 ## Prerequisites
 
-- Working CitrixHoneypot installation
+- Working honeypot installation
 - MySQL Server installation
 
 ## Installation
@@ -50,7 +50,7 @@ LockFile /home/citrix/CitrixHoneypot/data/.geoipupdate.lock
 
 Change the paths in the options `DatabaseDirectory` and `LockFile` if you
 have opted to use paths different from the ones suggested by the
-CitrixHoneypot installation documentation. Make sure you replace `<ACCOUNT>`
+honeypot installation documentation. Make sure you replace `<ACCOUNT>`
 and `<KEY>` with the account and API key obtained from MaxMind.
 
 In order to be able to download the MaxMind geolocation databases (either
@@ -79,7 +79,7 @@ create a crontab job (`crontab -e`) and enter the following:
 
 Alternatively, if you already have the MaxMind geolocation databases installed
 and updated on your machine in some other place, use their respective paths in
-the `[mysql_output]` section of the file `citrixhoneyot.cfg`, as mentioned
+the `[mysql_output]` section of the file `honeyot.cfg`, as mentioned
 below.
 
 ## MySQL Configuration
@@ -129,11 +129,11 @@ MySQL> source ./docs/sql/mysql.sql;
 MySQL> exit
 ```
 
-## CitrixHoneypot Configuration
+## Honeypot Configuration
 
-Add the following entries to the file `~/CitrixHoneypot/etc/citrixhoneypot.cfg`
+Add the following entries to the file `~/CitrixHoneypot/etc/honeypot.cfg`
 
-```citrixhoneypot.cfg
+```honeypot.cfg
 [output_mysql]
 enabled = true
 host = localhost
@@ -153,16 +153,16 @@ instead of 'PASSWORD HERE'. Make sure the options `geoip_citydb` and
 `geoip_asndb` point to the correct paths of the two MaxMind geolocation
 databases.
 
-Since the file `citrixhoneypot.cfg` contains in cleartext the password for
+Since the file `honeypot.cfg` contains in cleartext the password for
 the database, it would be a good idea to change its permissions so that only
 the user `citrix` can access it:
 
 ```bash
-chmod g-r,o-r ~/CitrixHoneypot/etc/citrixhoneypot.cfg
+chmod g-r,o-r ~/CitrixHoneypot/etc/honeypot.cfg
 ```
 
-## Restart CitrixHoneypot
+## Restart the honeypot
 
 ```bash
-./bin/citrixhoneypot restart
+./bin/honeypot restart
 ```

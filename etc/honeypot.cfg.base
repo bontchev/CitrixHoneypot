@@ -3,13 +3,13 @@
 # manage and support.
 #
 # Please make any changes to system defaults by overriding them in
-# citrixhoneypot.cfg
+# honeypot.cfg
 #
 # To override a specific setting, copy the name of the stanza and
 # setting to the file where you wish to override it.
 
 # ============================================================================
-# General CitrixHoneypot Options
+# General Honeypot Options
 # ============================================================================
 [honeypot]
 
@@ -23,15 +23,15 @@
 #sensor_name = myhostname
 
 # Directory where to save log files in.
-# Log files are named citrixhoneypot.log.YYYY-MM-DD in that directory
+# Log files are named honeypot.log.YYYY-MM-DD in that directory
 #
 # (default: log)
 log_path = log
 
 # Log file name
 #
-# (default: citrix.log)
-#log_filename = citrix.log
+# (default: honeypot.log)
+#log_filename = honeypot.log
 
 # Directory containing the SSL certificate
 #
@@ -85,7 +85,7 @@ log_path = log
 #
 #[output_jsonlog]
 #enabled = true
-#logfile = log/citrixhoneypot.json
+#logfile = log/honeypot.json
 #epoch_timestamp = true
 
 # MySQL logging module
@@ -97,8 +97,8 @@ log_path = log
 #[output_mysql]
 #enabled = false
 #host = localhost
-#database = citrixhoneypot
-#username = citrixhoneypot
+#database = honeypot
+#username = honeypot
 #password = secret
 #port = 3306
 #debug = false
@@ -116,8 +116,8 @@ log_path = log
 #enabled = false
 #host = localhost
 #port = 9200
-#index = citrixhoneypot
-#type = citrixhoneypot
+#index = honeypot
+#type = honeypot
 #pipeline = geoip
 
 # Text output
@@ -139,7 +139,7 @@ log_path = log
 #
 #[output_sqlite]
 #enabled = false
-#db_file = citrixhoneypot.db
+#db_file = honeypot.db
 
 # HPFeeds
 #

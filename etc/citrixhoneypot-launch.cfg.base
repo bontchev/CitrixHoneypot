@@ -1,6 +1,0 @@
-#Change the below to yes if you are using authbind to listen to port 443
-AUTHBIND_ENABLED=no
-
-# To override the default virtual enviroment, either set CITRIX_VIRTUAL_ENV or
-# activate it before starting CitrixHoneypot
-CITRIX_VIRTUAL_ENV=citrix-env

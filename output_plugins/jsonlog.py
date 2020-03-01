@@ -7,7 +7,7 @@ import errno
 import core.output
 
 from core.config import CONFIG
-from core.logfile import CitrixDailyLogFile
+from core.logfile import HoneypotDailyLogFile
 
 class Output(core.output.Output):
 
@@ -22,7 +22,7 @@ class Output(core.output.Output):
             except OSError as exc:
                 if exc.errno != errno.EEXIST:
                     raise
-        self.outfile = CitrixDailyLogFile(base, dirs, defaultMode=0o664)
+        self.outfile = HoneypotDailyLogFile(base, dirs, defaultMode=0o664)
 
     def stop(self):
         self.outfile.flush()

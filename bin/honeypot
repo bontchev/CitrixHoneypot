@@ -1,14 +1,13 @@
 #!/bin/bash
 
-citrixhoneypot_directory() {
+honeypot_directory() {
     if [[ "$0" = /* ]]
     then
-        CITRIXHONEYPOTDIR=$(dirname "$0")/..
+        HONEYPOTDIR=$(dirname "$0")/..
     else
-        CITRIXHONEYPOTDIR=$(dirname "$PWD"/"$0")/..
+        HONEYPOTDIR=$(dirname "$PWD"/"$0")/..
     fi
-#    CITRIXHONEYPOTDIR=$(cd "${CITRIXHONEYPOTDIR}" && pwd -P 2>/dev/null || pwd)
-    CITRIXHONEYPOTDIR=$(if cd "${CITRIXHONEYPOTDIR}"; then pwd -P 2>/dev/null; else pwd; fi)
+    HONEYPOTDIR=$(if cd "${HONEYPOTDIR}"; then pwd -P 2>/dev/null; else pwd; fi)
 }
 
 config_read_file() {
@@ -34,33 +33,33 @@ activate_venv() {
     return 0
 }
 
-citrixhoneypot_status() {
+honeypot_status() {
     # Print status
     PID=$(cat "${PIDFILE}" 2>/dev/null || echo "")
     if [ -n "$PID" ]; then
         if ps -p "$PID" >/dev/null 2>&1; then
-            echo "CitrixHoneypot is running (PID: ${PID})."
+            echo "The honeypot is running (PID: ${PID})."
         else
-            echo "CitrixHonepot is not running (PID: ${PID})."
+            echo "The honepot is not running (PID: ${PID})."
             echo "Removing stale PID file"
             rm -f "${PIDFILE}"
         fi
     else
-        echo "CitrixHoneypot is not running."
+        echo "The honeypot is not running."
     fi
 }
 
-citrixhoneypot_start() {
-    # Start CitrixHoneypot
-    citrixhoneypot_status
+honeypot_start() {
+    # Start the honeypot
+    honeypot_status
     PID=$(cat "${PIDFILE}" 2>/dev/null || echo -n "")
 
     if [ ! -z "$VIRTUAL_ENV" ]
     then
         echo 2>&1 "Using activated Python virtual environment \"$VIRTUAL_ENV\""
-    elif activate_venv "$CITRIX_VIRTUAL_ENV"
+    elif activate_venv "$HONEYPOT_VIRTUAL_ENV"
     then
-        echo 2>&1 "Using custom Python virtual environment \"$CITRIX_VIRTUAL_ENV\""
+        echo 2>&1 "Using custom Python virtual environment \"$HONEYPOT_VIRTUAL_ENV\""
     elif activate_venv "$DEFAULT_VIRTUAL_ENV"
     then
         echo 2>&1 "Using default Python virtual environment \"$DEFAULT_VIRTUAL_ENV\""
@@ -69,22 +68,22 @@ citrixhoneypot_start() {
     fi
 
     if [ -z "$PID" ]; then
-        echo "Starting CitrixHoneypot ..."
+        echo "Starting the honeypot ..."
         if [ "$AUTHBIND_ENABLED" = "no" ]
         then
-            nohup python "${CITRIXHONEYPOTDIR}/CitrixHoneypot.py" &>/dev/null & echo $! >"${CITRIXHONEYPOTDIR}/${PIDFILE}"
+            nohup python "${HONEYPOTDIR}/CitrixHoneypot.py" &>/dev/null & echo $! >"${HONEYPOTDIR}/${PIDFILE}"
         else
-            nohup authbind --deep python "${CITRIXHONEYPOTDIR}/CitrixHoneypot.py" &>/dev/null & echo $! >"${CITRIXHONEYPOTDIR}/${PIDFILE}"
+            nohup authbind --deep python "${HONEYPOTDIR}/CitrixHoneypot.py" &>/dev/null & echo $! >"${HONEYPOTDIR}/${PIDFILE}"
         fi
-        echo 2>&1 "CitrixHoneypot was started successfully."
+        echo 2>&1 "The honeypot was started successfully."
     fi
 }
 
-citrixhoneypot_stop() {
-    # Stop CitrixHoneypot
+honeypot_stop() {
+    # Stop the honeypot
     PID=$(cat "${PIDFILE}" 2>/dev/null || echo -n "")
     if [ -n "$PID" ]; then
-        echo -n "Stopping CitrixHoneypot..."
+        echo -n "Stopping the honeypot..."
         if kill -TERM "$PID"; then
             ((t = 60))
             while ((t > 1)); do
@@ -104,11 +103,11 @@ citrixhoneypot_stop() {
             rm -f "${PIDFILE}"
         fi
     else
-        echo "CitrixHoneypot is not running."
+        echo "The honeypot is not running."
     fi
 }
 
-citrixhoneypot_usage() {
+honeypot_usage() {
     echo "usage: $0 <start|stop|restart|status>"
 }
 
@@ -118,39 +117,39 @@ citrixhoneypot_usage() {
 
 if [ "$#" = 0 ]
 then
-    citrixhoneypot_usage
+    honeypot_usage
     exit 1
 fi
 
-citrixhoneypot_directory "$0"
-config_dir=${CITRIXHONEYPOTDIR}/etc
-config_file_name=${config_dir}/citrixhoneypot-launch.cfg
+honeypot_directory "$0"
+config_dir=${HONEYPOTDIR}/etc
+config_file_name=${config_dir}/honeypot-launch.cfg
 
-CITRIX_VIRTUAL_ENV="$(config_get CITRIX_VIRTUAL_ENV)";
+HONEYPOT_VIRTUAL_ENV="$(config_get HONEYPOT_VIRTUAL_ENV)";
 AUTHBIND_ENABLED="$(config_get AUTHBIND_ENABLED)";
 
-cd "${CITRIXHONEYPOTDIR}"
-PIDFILE=citrixhoneypot.pid
+cd "${HONEYPOTDIR}"
+PIDFILE=honeypot.pid
 set -e
 
 key=$1
 shift 1
 case $key in
     stop)
-        citrixhoneypot_stop "$*"
+        honeypot_stop "$*"
         ;;
     start)
-        citrixhoneypot_start "$*"
+        honeypot_start "$*"
         ;;
     restart)
-        citrixhoneypot_stop "$*"
-        citrixhoneypot_start "$*"
+        honeypot_stop "$*"
+        honeypot_start "$*"
         ;;
     status)
-        citrixhoneypot_status "$*"
+        honeypot_status "$*"
         ;;
     *)
-        citrixhoneypot_usage
+        honeypot_usage
         exit 1
         ;;
 esac

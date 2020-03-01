@@ -23,10 +23,11 @@ from twisted.internet import reactor, endpoints
 
 
 __VERSION__ = '2.0.0'
+__description__ = 'Citrix CVE-2019-19781 Honeypot by MalwareTech'
 
 
 def get_options(cfg_options):
-    parser = ArgumentParser(prog='CitrixHoneypot', description='Citrix Honeypot')
+    parser = ArgumentParser(description=__description__)
 
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + __VERSION__)
     parser.add_argument('-a', '--addr', type=str, default=cfg_options['addr'],
@@ -78,7 +79,7 @@ def main():
 
     set_logger(cfg_options)
 
-    log.msg('Citrix CVE-2019-19781 Honeypot by MalwareTech')
+    log.msg(__description__)
 
     cfg_options['output_plugins'] = tools.import_plugins(cfg_options)
 

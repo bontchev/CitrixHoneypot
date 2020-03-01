@@ -7,7 +7,7 @@ from twisted.python.logfile import DailyLogFile
 from twisted.python import log, util
 
 
-class CitrixDailyLogFile(DailyLogFile):
+class HoneypotDailyLogFile(DailyLogFile):
     """
     Overload original Twisted with improved date formatting
     """
@@ -70,4 +70,4 @@ def set_logger(cfg_options):
     if cfg_options['logfile'] is None:
         log.startLogging(sys.stdout)
     else:
-        log.startLogging(CitrixDailyLogFile.fromFullPath(cfg_options['logfile']), setStdout=False)
+        log.startLogging(HoneypotDailyLogFile.fromFullPath(cfg_options['logfile']), setStdout=False)

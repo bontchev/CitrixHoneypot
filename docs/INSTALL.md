@@ -10,11 +10,11 @@
   - [Step 5: Create a self-signed certificate](#step-5-create-a-self-signed-certificate)
   - [Step 6: Setup Virtual Environment](#step-6-setup-virtual-environment)
   - [Step 7: Create a configuration file](#step-7-create-a-configuration-file)
-  - [Step 8: Starting CitrixHoneypot](#step-8-starting-citrixhoneypot)
+  - [Step 8: Starting the honeypot](#step-8-starting-the-honeypot)
   - [Configure Additional Output Plugins (OPTIONAL)](#configure-additional-output-plugins-optional)
   - [Docker Usage (Optional)](#docker-usage-optional)
   - [Command-line options](#command-line-options)
-  - [Upgrading CitrixHoneypot](#upgrading-citrixhoneypot)
+  - [Upgrading the honeypot](#upgrading-the-honeypot)
 
 ## Step 1: Install the dependencies
 
@@ -135,7 +135,7 @@ not from the user `citrix` - but after this user has been created in
 [step 3](#step-3-create-a-user-account)):
 
 ```bash
-$ sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 4443
+sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 4443
 ```
 
 Note that you should test this rule only from another host; it doesn't apply
@@ -145,13 +145,13 @@ The second way is to use authbind and allow the honeypot to listen to port 443
 directly:
 
 ```bash
-$ sudo apt-get install authbind
-$ sudo touch /etc/authbind/byport/443
-$ sudo chown citrix:citrix /etc/authbind/byport/443
-$ sudo chmod 770 /etc/authbind/byport/443
+sudo apt-get install authbind
+sudo touch /etc/authbind/byport/443
+sudo chown citrix:citrix /etc/authbind/byport/443
+sudo chmod 770 /etc/authbind/byport/443
 ```
 
-Then edit the file `etc/citrixhoneypot-launch.cgf` and modify the
+Then edit the file `etc/honeypot-launch.cfg` and modify the
 AUTHBIND_ENABLED setting after [step 7](#step-7-create-a-configuration-file).
 
 ## Step 3: Create a user account
@@ -203,7 +203,7 @@ Next you need to create your virtual environment:
 
 ```bash
 $ pwd
-/home/citrix/citrixHoneypot
+/home/citrix/CitrixHoneypot
 $ virtualenv citrix-env
 New python executable in ./citrix-env/bin/python
 Installing setuptools, pip, wheel...done.
@@ -219,17 +219,17 @@ $ source citrix-env/bin/activate
 
 ## Step 7: Create a configuration file
 
-The configuration for the honeypot is stored in `etc/citrixhoneypot.cfg.base` and
-`etc/citrixhoneypot.cfg`. Both files are read on startup but the entries from
-`etc/citrixhoneypot.cfg` take precedence. The `.base` file contains the default
-settings and can be overwritten by upgrades, while `citrixhoneypot.cfg` will not be
+The configuration for the honeypot is stored in `etc/honeypot.cfg.base` and
+`etc/honeypot.cfg`. Both files are read on startup but the entries from
+`etc/honeypot.cfg` take precedence. The `.base` file contains the default
+settings and can be overwritten by upgrades, while `honeypot.cfg` will not be
 touched. To run with a standard configuration, there is no need to change
 anything.
 
-For instance, in order to enable JSON logging, create `etc/citrixhoneypot.cfg` and
+For instance, in order to enable JSON logging, create `etc/honeypot.cfg` and
 put in it only the following:
 
-```citrixhoneypot.cfg
+```honeypot.cfg
 [output_jsonlog]
 enabled = true
 logfile = log/citrix.json
@@ -240,7 +240,7 @@ For more information about how to configure additional output plugins (from
 the available ones), please consult the appropriate `README.md` file in the
 subdirectory corresponding to the plugin inside the `docs` directory.
 
-## Step 8: Starting CitrixHoneypot
+## Step 8: Starting the honeypot
 
 Before starting the honeypot, make sure that you have specified correctly
 where it should look for the virtual environment. This documentation suggests
@@ -248,18 +248,18 @@ that you create it in `/home/citrix/CitrixHoneypot/citrix-env/`. If you have ind
 created it there, there is no need to change anything. If, however, you have
 created it elsewhere, you have to do the following:
 
-- Make a copy of the file `citrixhoneypot-launch.cfg.base`:
+- Make a copy of the file `honeypot-launch.cfg.base`:
 
 ```bash
 $ pwd
 /home/citrix/CitrixHoneypot
-cd etc
-cp citrixhoneypot-launch.cfg.base citrixhoneypot-launch.cfg
-cd ..
+$ cd etc
+$ cp honeypot-launch.cfg.base honeypot-launch.cfg
+$ cd ..
 ```
 
-- Edit the file `/home/citrix/CitrixHoneypot/etc/citrixhoneypot-launch.cfg` and change the
-  setting of the variable `CITRIX_VIRTUAL_ENV` to point to the directory where your
+- Edit the file `/home/citrix/CitrixHoneypot/etc/honeypot-launch.cfg` and change the
+  setting of the variable `HONEYPOT_VIRTUAL_ENV` to point to the directory where your
   virtual environment is.
 
 Now you can launch the honeypot:
@@ -267,14 +267,14 @@ Now you can launch the honeypot:
 ```bash
 $ pwd
 /home/citrix/CitrixHoneypot
-./bin/citrixhoneypot start
-Starting CitrixHoneypot ...
-CitrixHoneypot is started successfully.
+$ ./bin/honeypot start
+Starting the honeypot ...
+The honeypot was started successfully.
 ```
 
 ## Configure Additional Output Plugins (OPTIONAL)
 
-CitrixHoneypot automatically outputs event data to text in `log/citrix.log`.
+The honeypot automatically outputs event data to text in `log/honeypot.log`.
 Additional output plugins can be configured to record the data other ways.
 Supported output plugins include:
 
@@ -287,7 +287,19 @@ See `docs/[Output Plugin]/README.md` for details.
 
 ## Docker Usage (Optional)
 
+First, from a user who can `sudo` (i.e., not from the user `citrix`) make
+sure that `docker` is installed and that the user `citrix` is a member of
+the `docker` group:
+
 ```bash
+sudo apt-get install docker.io
+sudo usermod -a -G docker citrix
+```
+
+Then switch to the user `citrix`, build the Docker image, and run it:
+
+```bash
+sudo su - citrix
 docker build -t citrixhoneypot .
 docker run -d -p 443:443 -v /<insert-homepath>/CitrixHoneypot:/CitrixHoneypot -w /CitrixHoneypot citrixhoneypot
 ```
@@ -312,15 +324,15 @@ CitrixHoneypot supports the following command-line options:
 The settings specified via command-line options take precedence over the
 corresponding settings in the `.cfg` files.
 
-## Upgrading CitrixHoneypot
+## Upgrading the honeypot
 
 Updating is an easy process. First stop your honeypot. Then fetch any
 available updates from the repository. As a final step upgrade your Python
 dependencies and restart the honeypot:
 
 ```bash
-./bin/citrixhoneypot stop
+./bin/honeypot stop
 git pull
 pip install --upgrade -r requirements.txt
-./bin/citrixhoneypot start
+./bin/honeypot start
 ```

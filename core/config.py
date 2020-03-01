@@ -34,4 +34,4 @@ def readConfigFile(cfgfile):
     return parser
 
 
-CONFIG = readConfigFile(('etc/citrixhoneypot.cfg.base', 'etc/citrixhoneypot.cfg', 'citrixhoneypot.cfg'))
+CONFIG = readConfigFile(('etc/honeypot.cfg.base', 'etc/honeypot.cfg', 'honeypot.cfg'))
