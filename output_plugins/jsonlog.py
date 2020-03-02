@@ -1,15 +1,15 @@
 
 import os
-import json
-import copy
-import errno
 
-import core.output
+from json import dump
+from errno import EEXIST
+from copy import deepcopy
 
+from core import output
 from core.config import CONFIG
 from core.logfile import HoneypotDailyLogFile
 
-class Output(core.output.Output):
+class Output(output.Output):
 
     def start(self):
         self.epoch_timestamp = CONFIG.getboolean('output_jsonlog', 'epoch_timestamp', fallback=False)
@@ -20,7 +20,7 @@ class Output(core.output.Output):
             try:
                 os.makedirs(dirs)
             except OSError as exc:
-                if exc.errno != errno.EEXIST:
+                if exc.errno != EEXIST:
                     raise
         self.outfile = HoneypotDailyLogFile(base, dirs, defaultMode=0o664)
 
@@ -30,10 +30,10 @@ class Output(core.output.Output):
     def write(self, event):
         if not self.epoch_timestamp:
             # We need 'unixtime' value in some other plugins
-            event_dump = copy.deepcopy(event)
+            event_dump = deepcopy(event)
             event_dump.pop('unixtime', None)
         else:
             event_dump = event
-        json.dump(event_dump, self.outfile, separators=(',', ':'))
+        dump(event_dump, self.outfile, separators=(',', ':'))
         self.outfile.write('\n')
         self.outfile.flush()

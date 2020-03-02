@@ -1,5 +1,5 @@
 
-import time
+from time import time
 
 from core import tools
 
@@ -34,7 +34,7 @@ class Index(Resource):
             # check if the directory traversal bug has been tried
             if len(url_path) >= 1 and url_path[0] == 'vpns':
 
-                unix_time = time.time()
+                unix_time = time()
                 human_time = tools.getutctime(unix_time)
                 local_ip = tools.getlocalip()
                 event = {
@@ -102,7 +102,7 @@ class Index(Resource):
             # check if the directory traversal bug has been tried
             if len(url_path) >= 1 and url_path[0] == 'vpns':
 
-                unix_time = time.time()
+                unix_time = time()
                 human_time = tools.getutctime(unix_time)
                 local_ip = tools.getlocalip()
                 event = {
@@ -168,7 +168,7 @@ class Index(Resource):
             content_length = int(request.getHeader('Content-Length'))
             if content_length > 0:
                 post_data = request.content.read().decode('utf-8')
-                unix_time = time.time()
+                unix_time = time()
                 tools.logger(request, 'INFO', 'POST body: {}'.format(post_data))
                 human_time = tools.getutctime(unix_time)
                 local_ip = tools.getlocalip()

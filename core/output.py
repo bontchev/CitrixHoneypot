@@ -1,5 +1,5 @@
 
-import socket
+from socket import gethostname
 
 from core.config import CONFIG
 
@@ -14,7 +14,7 @@ class Output(object):
         self.cfg = general_options
 
         if not 'sensor' in self.cfg:
-            self.sensor = CONFIG.get('honeypot', 'sensor_name', fallback=socket.gethostname())
+            self.sensor = CONFIG.get('honeypot', 'sensor_name', fallback=gethostname())
         else:
             self.sensor = self.cfg['sensor']
 

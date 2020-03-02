@@ -1,8 +1,8 @@
 
-import os
-import errno
-import socket
-import datetime
+from errno import EEXIST
+from os import makedirs, path
+from datetime import datetime
+from socket import socket, AF_INET, SOCK_DGRAM
 
 from core.config import CONFIG
 
@@ -25,11 +25,11 @@ def get_real_port (request):
 
 
 def getutctime(unixtime):
-    return datetime.datetime.utcfromtimestamp(unixtime).isoformat() + 'Z'
+    return datetime.utcfromtimestamp(unixtime).isoformat() + 'Z'
 
 
 def getlocalip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s = socket(AF_INET, SOCK_DGRAM)
     try:
         s.connect(('10.255.255.255', 1))
         ip = s.getsockname()[0]
@@ -75,12 +75,13 @@ def mkdir(path):
     if not path:
         return
     try:
-        os.makedirs(path)
+        makedirs(path)
     except OSError as exc:
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
+        if exc.errno == EEXIST and path.isdir(path):
             pass
         else:
             raise
+
 
 def import_plugins(cfg):
     # Load output modules (inspired by the Cowrie honeypot)

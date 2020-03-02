@@ -1,10 +1,9 @@
 
-import sys
-
+from sys import stdout
 from datetime import datetime
 
-from twisted.python.logfile import DailyLogFile
 from twisted.python import log, util
+from twisted.python.logfile import DailyLogFile
 
 
 class HoneypotDailyLogFile(DailyLogFile):
@@ -68,6 +67,6 @@ def set_logger(cfg_options):
     log.FileLogObserver.emit = myFLOemit
     log.FileLogObserver.formatTime = myFLOformatTime
     if cfg_options['logfile'] is None:
-        log.startLogging(sys.stdout)
+        log.startLogging(stdout)
     else:
         log.startLogging(HoneypotDailyLogFile.fromFullPath(cfg_options['logfile']), setStdout=False)

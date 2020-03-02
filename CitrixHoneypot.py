@@ -7,15 +7,14 @@ This software is free to use providing the user yells
 "Oh no, the cyberhackers are coming!" prior to each installation.
 """
 
-import os
-import socket
-
+from os.path import join
+from socket import gethostname
 from argparse import ArgumentParser
 
-from core import tools
 from core.config import CONFIG
 from core.protocol import Index
 from core.logfile import set_logger
+from core.tools import mkdir, import_plugins, stop_plugins
 
 from twisted.web import server
 from twisted.python import log
@@ -60,12 +59,12 @@ def main():
     log_name = CONFIG.get('honeypot', 'log_filename', fallback='')
     if log_name:
         logdir = CONFIG.get('honeypot', 'log_path', fallback='')
-        tools.mkdir(logdir)
-        cfg_options['logfile'] = os.path.join(logdir, log_name)
+        mkdir(logdir)
+        cfg_options['logfile'] = join(logdir, log_name)
     else:
         cfg_options['logfile'] = None
     cfg_options['ssldir'] = CONFIG.get('honeypot', 'ssl_dir', fallback='ssl')
-    cfg_options['sensor'] = CONFIG.get('honeypot', 'sensor_name', fallback=socket.gethostname())
+    cfg_options['sensor'] = CONFIG.get('honeypot', 'sensor_name', fallback=gethostname())
     cfg_options['debug'] = CONFIG.get('honeypot', 'verbosity', fallback='info')
     cfg_options['struggle'] = CONFIG.getboolean('honeypot', 'struggle_check', fallback=False)
 
@@ -81,7 +80,7 @@ def main():
 
     log.msg(__description__)
 
-    cfg_options['output_plugins'] = tools.import_plugins(cfg_options)
+    cfg_options['output_plugins'] = import_plugins(cfg_options)
 
     site = server.Site(Index(cfg_options))
     site.log = mySiteLog
@@ -95,7 +94,7 @@ def main():
     endpoints.serverFromString(reactor, endpoint_spec).listen(site)
     reactor.run()   # pylint: disable=no-member
     log.msg('Shutdown requested, exiting...')
-    tools.stop_plugins(cfg_options)
+    stop_plugins(cfg_options)
 
 
 if __name__ == '__main__':
