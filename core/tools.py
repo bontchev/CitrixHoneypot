@@ -71,13 +71,13 @@ def write_event(event, cfg):
             continue
 
 
-def mkdir(path):
-    if not path:
+def mkdir(dir_path):
+    if not dir_path:
         return
     try:
-        makedirs(path)
+        makedirs(dir_path)
     except OSError as exc:
-        if exc.errno == EEXIST and path.isdir(path):
+        if exc.errno == EEXIST and path.isdir(dir_path):
             pass
         else:
             raise
