@@ -301,7 +301,7 @@ Then switch to the user `citrix`, build the Docker image, and run it:
 ```bash
 sudo su - citrix
 docker build -t citrixhoneypot .
-docker run -d -p 443:443 -v /<insert-homepath>/CitrixHoneypot:/CitrixHoneypot -w /CitrixHoneypot citrixhoneypot
+docker run -d -p 443:443 -v $(HOME}/CitrixHoneypot:/CitrixHoneypot -w /CitrixHoneypot citrixhoneypot
 ```
 
 ## Command-line options
