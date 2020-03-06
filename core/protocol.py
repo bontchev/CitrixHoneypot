@@ -21,7 +21,7 @@ class Index(Resource):
 
     def render_HEAD(self, request):
         path = unquote(request.uri.decode('utf-8'))
-        tools.logger(request, 'INFO', '{}: {}'.format(request.method, path))
+        tools.logger(request, 'INFO', '{}: {}'.format(request.method.decode('utf-8'), path))
 
         # split the path by '/', ignoring empty string
         url_path = list(filter(None, path.split('/')))
@@ -79,7 +79,7 @@ class Index(Resource):
     def render_GET(self, request):
         path = unquote(request.uri.decode('utf-8'))
 
-        tools.logger(request, 'INFO', '{}: {}'.format(request.method, path))
+        tools.logger(request, 'INFO', '{}: {}'.format(request.method.decode('utf-8'), path))
 
         if self.struggle_check(request, path):
             self.send_response(request)
@@ -161,7 +161,7 @@ class Index(Resource):
     def render_POST(self, request):
         path = unquote(request.uri.decode('utf-8'))
 
-        tools.logger(request, 'INFO', '{}: {}'.format(request.method, path))
+        tools.logger(request, 'INFO', '{}: {}'.format(request.method.decode('utf-8'), path))
 
         if request.getHeader('Content-Length'):
             collapsed_path = tools.resolve_url(path)

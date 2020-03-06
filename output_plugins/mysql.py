@@ -28,7 +28,7 @@ class ReconnectingConnectionPool(ConnectionPool):
             return ConnectionPool._runInteraction(
                 self, interaction, *args, **kw)
         except MySQLdb.OperationalError as e:   # pylint: disable=no-member
-            if e[0] not in (2003, 2006, 2013):
+            if e.args[0] not in (2003, 2006, 2013):
                 raise e
             conn = self.connections.get(self.threadID())
             self.disconnect(conn)
