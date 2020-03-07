@@ -296,12 +296,22 @@ sudo apt-get install docker.io
 sudo usermod -a -G docker citrix
 ```
 
+**WARNING!** The a user who belongs to the `docker` group has root user
+privileges, which negates the advantages of creating the `citrix` user as a
+restricted user in the first place. If a user is not a member of the `docker`
+group, the only way for them to use Docker is via `sudo` - which a restricted
+user like `citrix` cannot do. Since this increases the
+[attack surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface),
+we advise against using the honeypot with Docker. One alternative is to look
+into other containerization systems that do not require privileged user access
+in order to operate - e.g., [Podman](https://podman.io/).
+
 Then switch to the user `citrix`, build the Docker image, and run it:
 
 ```bash
 sudo su - citrix
 docker build -t citrixhoneypot .
-docker run -d -p 443:443 -v $(HOME}/CitrixHoneypot:/CitrixHoneypot -w /CitrixHoneypot citrixhoneypot
+docker run -d -p 443:443/tcp -u $(id -u):$(id -g) -v $(HOME}/CitrixHoneypot:/CitrixHoneypot -w /CitrixHoneypot citrixhoneypot
 ```
 
 ## Command-line options
