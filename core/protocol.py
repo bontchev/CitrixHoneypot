@@ -91,7 +91,7 @@ class Index(Resource):
         if len(url_path) == 0 or \
            (len(url_path) == 1 and url_path[0] == 'vpn') or \
            (len(url_path) == 2 and url_path[0] == 'vpn' and url_path[1].lower().startswith('index.htm')):
-            return self.send_response(self.get_page('login.html'))
+            return self.send_response(request, self.get_page('login.html'))
 
         # only proceed if a directory traversal was attempted
         if path.find('/../') != -1:
@@ -205,7 +205,7 @@ class Index(Resource):
             # if the path does not contain /../ it's likely attacker was using a sanitized client which removed it
             if path in ['/vpns/portal/scripts/newbm.pl', '/vpns/cfg/smb.conf', '/vpns/']:
                 tools.logger(request, 'DEBUG', 'Detected a failed directory traversal attempt.')
-                self.send_response(self.get_page('gold_star.html'))
+                self.send_response(request, self.get_page('gold_star.html'))
                 return True
 
         return False
