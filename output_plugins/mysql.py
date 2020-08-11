@@ -1,8 +1,13 @@
 
-import MySQLdb
+try:
+    from MySQLdb import Error, OperationalError
+except ImportError:
+    try:
+        from MySQLdb._exceptions import Error, OperationalError
+    except ImportError:
+        from _mysql_exceptions import Error, OperationalError
 
-import core.output
-
+from core import output
 from core.config import CONFIG
 
 from hashlib import sha256
@@ -27,7 +32,7 @@ class ReconnectingConnectionPool(ConnectionPool):
         try:
             return ConnectionPool._runInteraction(
                 self, interaction, *args, **kw)
-        except MySQLdb.OperationalError as e:   # pylint: disable=no-member
+        except OperationalError as e:
             if e.args[0] not in (2003, 2006, 2013):
                 raise e
             conn = self.connections.get(self.threadID())
@@ -37,7 +42,7 @@ class ReconnectingConnectionPool(ConnectionPool):
                 self, interaction, *args, **kw)
 
 
-class Output(core.output.Output):
+class Output(output.Output):
 
     def __init__(self, general_options):
         self.host = CONFIG.get('output_mysql', 'host', fallback='localhost')
@@ -54,7 +59,7 @@ class Output(core.output.Output):
 
         self.dbh = None
 
-        core.output.Output.__init__(self, general_options)
+        output.Output.__init__(self, general_options)
 
     def local_log(self, msg):
         if self.debug:
@@ -74,7 +79,7 @@ class Output(core.output.Output):
                 cp_min=1,
                 cp_max=1
             )
-        except MySQLdb.Error as e:  # pylint: disable=no-member
+        except Error as e:
             self.local_log('MySQL plugin: Error {}: {}'.format(e.args[0], e.args[1]))
 
         if self.geoip:
