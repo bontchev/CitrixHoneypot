@@ -1,5 +1,8 @@
 FROM python
-LABEL maintainer="@Tu5k4rr"
+LABEL maintainer="Bontchev"
+LABEL name="CitrixHoneypot"
+LABEL version="2.0.2"
+EXPOSE 443
 COPY . /CitrixHoneypot/
 WORKDIR /CitrixHoneypot
 RUN pip install -r requirements.txt
