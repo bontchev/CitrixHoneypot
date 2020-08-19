@@ -7,20 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.2]
 
-### Changed
+### Changed in version 2.0.2
 
 * Now handling custom HTTP requests, not just HEAD, GET, and POST
+* Fixed an error in the MySQL plugin error handler
+* Improved the `Dockerfile`
 * Minor optimizations
 
 ## [2.0.1]
 
-### Changed
+### Changed in version 2.0.1
 
 * Fixed a bug when responding to certain requests
 
 ## [2.0.0]
 
-### Added
+### Added in version 2.0.0
 
 * A script for starting, stopping, and restarting the honeypot
 * Config file support
@@ -31,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Output plugin for MySQL
 * Log rotation
 
-### Changed
+### Changed in version 2.0.0
 
 * Made the script compatible with Python 2.7
 * The HTTPS server and the logging now use the Twisted framework
