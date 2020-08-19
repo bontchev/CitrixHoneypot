@@ -21,7 +21,7 @@ from twisted.python import log
 from twisted.internet import reactor, endpoints
 
 
-__VERSION__ = '2.0.2'
+__VERSION__ = '2.0.3'
 __description__ = 'Citrix CVE-2019-19781 Honeypot by MalwareTech'
 
 
