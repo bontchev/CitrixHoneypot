@@ -10,10 +10,12 @@ except ImportError:
 from core import output
 from core.config import CONFIG
 
+from sys import exc_info
 from hashlib import sha256
 from geoip2.database import Reader
 
 from twisted.python import log
+from twisted.python.compat import reraise
 from twisted.enterprise.adbapi import ConnectionPool
 
 
@@ -29,17 +31,31 @@ class ReconnectingConnectionPool(ConnectionPool):
     """
 
     def _runInteraction(self, interaction, *args, **kw):
+
+        def rerise_exception(conn):
+            _, excValue, excTraceback = exc_info()
+            try:
+                conn.rollback()
+            except:
+                log.msg('Rollback failed')
+            reraise(excValue, excTraceback)
+
+        conn = self.connectionFactory(self)
+        trans = self.transactionFactory(self, conn)
         try:
-            return ConnectionPool._runInteraction(
-                self, interaction, *args, **kw)
+            result = interaction(trans, *args, **kw)
+            trans.close()
+            conn.commit()
+            return result
         except OperationalError as e:
             if e.args[0] not in (2003, 2006, 2013):
-                raise e
-            conn = self.connections.get(self.threadID())
-            self.disconnect(conn)
-            # Try the interaction again
-            return ConnectionPool._runInteraction(
-                self, interaction, *args, **kw)
+                rerise_exception(conn)
+            else:
+                conn = self.connections.get(self.threadID())
+                self.disconnect(conn)
+                return ConnectionPool._runInteraction(self, interaction, *args, **kw)
+        except:
+            rerise_exception(conn)
 
 
 class Output(output.Output):
